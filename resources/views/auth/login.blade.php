@@ -8,19 +8,16 @@
     <title>login</title>
 </head>
 
-<body>
-    <div class="flex min-h-screen justify-center items-center bg-[#000000]">
-        <form class="flex flex-col space-y-4 " action="/login" method="POST">
+<body class="flex min-h-screen justify-center items-center bg-[#000000]">
+        <form class="flex gap-4 flex-col" action="/login" method="POST">
             @csrf
-            <input class="border-[#333333] bg-[#1A1A1A] text-[#FFFFFF] rounded p-2 w-full" name="email" type="email">
+            <input class="border-[#333333] bg-[#1A1A1A] text-[#FFFFFF] rounded p-2 w-full" name="email" type="email" placeholder="gmail">
             @error('email')
             <p class="text-[#ffffff]"> {{$message}} </p>
             @enderror
-            <input class="border-[#333333] bg-[#1A1A1A] text-[#FFFFFF] rounded p-2 w-full" name="password" type="password">
-            <button class="bg-[#F5B122] text-black p-2 rounded w-full font-semibold" type="submit">Login</button>
+            <input class="border-[#333333] bg-[#1A1A1A] text-[#FFFFFF] rounded p-2 w-full" name="password" type="password" placeholder="password">
+            <button class=" bg-[#F5B122] text-black p-2 rounded w-full font-semibold" type="submit">Login</button>
         </form>
-    </div>
-
 </body>
 
 </html>
