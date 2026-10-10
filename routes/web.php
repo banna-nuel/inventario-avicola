@@ -8,7 +8,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/login', [AuthController::class, 'showLoginForm']);
+// El middleware 'auth' redirige a la ruta llamada 'login' cuando no hay sesión
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout']);
 
