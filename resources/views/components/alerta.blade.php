@@ -17,7 +17,7 @@
 @endphp
 
 <div
-    {{ $attributes->merge(['class' => 'flex items-start gap-3 rounded-campo px-4 py-3 text-sm shadow-tarjeta '.$clases]) }}
+    {{ $attributes->merge(['class' => 'flex items-start gap-3 rounded-campo px-4 py-3 text-sm '.$clases]) }}
     role="{{ $tipo === 'error' ? 'alert' : 'status' }}"
     data-alerta
 >

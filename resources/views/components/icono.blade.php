@@ -18,6 +18,7 @@
         'flecha-izquierda' => 'M19 12H5M12 19l-7-7 7-7',
         'flecha-derecha' => 'M5 12h14M12 5l7 7-7 7',
         'mas' => 'M12 5v14M5 12h14',
+        'lupa' => 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
         'x' => 'M18 6 6 18M6 6l12 12',
         'salir' => 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
         'caja' => 'M21 8l-9-5-9 5v8l9 5 9-5V8zM3 8l9 5 9-5M12 13v8',
@@ -30,12 +31,17 @@
     ];
 @endphp
 
+@php
+    // Tamaño por defecto solo si la vista no pidió uno (si se juntan size-4 y size-5, gana el que Tailwind genere después)
+    $pidioTamano = str_contains((string) $attributes->get('class'), 'size-');
+@endphp
+
 @if (isset($rellenos[$nombre]))
-    <svg {{ $attributes->merge(['class' => 'size-4 shrink-0']) }} viewBox="{{ $rellenos[$nombre][0] }}" fill="currentColor" aria-hidden="true" focusable="false">
+    <svg {{ $attributes->merge(['class' => ($pidioTamano ? '' : 'size-4 ').'shrink-0']) }} viewBox="{{ $rellenos[$nombre][0] }}" fill="currentColor" aria-hidden="true" focusable="false">
         <path d="{{ $rellenos[$nombre][1] }}" />
     </svg>
 @elseif (isset($trazos[$nombre]))
-    <svg {{ $attributes->merge(['class' => 'size-5 shrink-0']) }} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <svg {{ $attributes->merge(['class' => ($pidioTamano ? '' : 'size-5 ').'shrink-0']) }} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
         <path d="{{ $trazos[$nombre] }}" />
     </svg>
 @endif

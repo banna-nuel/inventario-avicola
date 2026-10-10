@@ -4,7 +4,7 @@
     <div class="flex w-full max-w-sm flex-col gap-10">
         <div class="flex flex-col items-center gap-4 text-center">
             <p class="font-mono text-xs text-tenue">Iniciar sesión</p>
-            <h1 class="font-display text-4xl leading-tight font-light tracking-titulo sm:text-5xl">Inventario Avícola</h1>
+            <h1 class="font-display text-titulo font-light text-balance">Inventario Avícola</h1>
             <p class="font-mono text-xs text-tenue">Control de stock, entradas y salidas</p>
         </div>
 

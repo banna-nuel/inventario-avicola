@@ -8,11 +8,13 @@
 @props(['href' => null])
 
 @php
-    $clases = 'block rounded-tarjeta bg-superficie shadow-tarjeta';
+    // Plana, sin sombra, como en el Figma
+    $clases = 'block rounded-tarjeta bg-superficie';
 @endphp
 
 @if ($href)
-    <a href="{{ $href }}" {{ $attributes->merge(['class' => $clases.' transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]']) }}>
+    {{-- Al presionar se encoge a 0.97 (whileTap del Figma); al pasar el mouse aparece un borde sutil --}}
+    <a href="{{ $href }}" {{ $attributes->merge(['class' => $clases.' border border-transparent transition hover:border-borde-fuerte active:scale-[0.97]']) }}>
         {{ $slot }}
     </a>
 @else

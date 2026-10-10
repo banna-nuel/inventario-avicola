@@ -6,7 +6,8 @@
 --}}
 @props(['opciones', 'actual' => '', 'parametro' => 'tipo'])
 
-<nav {{ $attributes->merge(['class' => 'flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-x-6']) }} aria-label="Filtros">
+{{-- Repartidos a lo ancho (justify-between), como en el Figma --}}
+<nav {{ $attributes->merge(['class' => 'flex flex-wrap items-center justify-between gap-x-4 gap-y-2']) }} aria-label="Filtros">
     @foreach ($opciones as $valor => $etiqueta)
         @php
             $activo = (string) $valor === (string) $actual;
@@ -15,7 +16,7 @@
         <a
             href="{{ $url }}"
             @if ($activo) aria-current="true" @endif
-            class="relative pb-1.5 font-mono text-xs tracking-tight transition {{ $activo ? 'text-tinta' : 'text-tenue hover:text-tinta' }}"
+            class="relative pb-1.5 font-mono text-xs leading-[18px] font-medium tracking-filtro whitespace-nowrap transition {{ $activo ? 'text-tinta' : 'text-tenue hover:text-tinta' }}"
         >
             {{ $etiqueta }}
             @if ($activo)

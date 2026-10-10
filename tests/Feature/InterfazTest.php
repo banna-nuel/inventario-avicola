@@ -76,6 +76,32 @@ class InterfazTest extends TestCase
         $this->assertSame(1, substr_count($html, 'aria-current="page"'));
     }
 
+    public function test_el_circulo_activo_de_la_barra_se_ubica_segun_la_pagina(): void
+    {
+        $usuario = User::factory()->admin()->create();
+
+        // Cada ítem está 74 px más a la derecha (50 px de botón + 24 px de separación)
+        foreach (['/home' => 0, '/dashboard' => 74, '/search' => 148] as $url => $desplazamiento) {
+            $html = $this->actingAs($usuario)->get($url)->assertOk()->getContent();
+
+            $this->assertSame(1, substr_count($html, 'vt-nav-activo'), "Debe haber un solo círculo activo en {$url}");
+            $this->assertStringContainsString("translateX({$desplazamiento}px)", $html);
+            $this->assertStringContainsString('vt-encabezado', $html);
+            $this->assertStringContainsString('vt-contenido', $html);
+            $this->assertStringContainsString('vt-barra', $html);
+        }
+    }
+
+    public function test_una_pagina_fuera_de_la_barra_no_tiene_circulo_activo(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->get('/categorias')
+            ->assertOk()
+            ->assertDontSee('vt-nav-activo')
+            ->assertDontSee('aria-current="page"', false);
+    }
+
     public function test_el_layout_muestra_los_mensajes_flash(): void
     {
         $usuario = User::factory()->create();

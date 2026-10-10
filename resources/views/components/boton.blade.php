@@ -19,7 +19,7 @@
     $base = 'inline-flex items-center justify-center gap-2 rounded-full font-display tracking-titulo whitespace-nowrap transition active:scale-[0.97] disabled:pointer-events-none disabled:bg-deshabilitado disabled:text-tinta/60 aria-busy:cursor-progress';
 
     $tamanos = [
-        'normal' => 'min-h-12 px-6 py-3 text-base',
+        'normal' => 'px-6 py-[18px] text-base leading-[1.2]',
         'chico' => 'min-h-10 px-4 py-2 text-sm',
     ];
 

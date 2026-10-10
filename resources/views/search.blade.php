@@ -11,30 +11,28 @@
         }
     @endphp
 
-    <x-encabezado etiqueta="Buscar" titulo="¿Qué estás buscando?" />
+    {{-- Como en el Figma, Search no muestra título: la barra va directo bajo el encabezado --}}
+    <h1 class="sr-only">Buscar</h1>
 
-    <form action="/search" method="GET" role="search" class="flex flex-col gap-6">
+    <form action="/search" method="GET" role="search" class="pt-2.5">
         {{-- Conserva el filtro elegido al hacer una nueva búsqueda --}}
         @if (request('tipo'))
             <input type="hidden" name="tipo" value="{{ request('tipo') }}">
         @endif
 
-        <label for="q" class="sr-only">Buscar productos{{ auth()->user()->esAdmin() ? ', categorías o usuarios' : '' }}</label>
-        <div class="flex items-center gap-3 rounded-campo border border-transparent bg-superficie px-4 py-3.5 transition focus-within:border-tinta focus-within:shadow-[0_0_0_4px_rgb(245_166_35/0.45)] hover:border-borde-fuerte">
-            <x-icono nombre="buscar" class="text-tenue" />
-            <input id="q" name="q" type="search" value="{{ $q }}" enterkeyhint="search" autocomplete="off"
-                placeholder="{{ auth()->user()->esAdmin() ? 'Producto, categoría o usuario' : 'Nombre del producto o categoría' }}"
-                class="flex-1 bg-transparent font-mono text-base outline-none focus-visible:outline-none focus-visible:shadow-none sm:text-sm">
+        <label for="q" class="sr-only">Buscar productos{{ auth()->user()->esAdmin() ? ', categorías o usuarios' : ' por nombre o categoría' }}</label>
+        <div class="mb-5 flex items-center gap-2.5 rounded-campo border border-transparent bg-superficie px-4 py-3.5 transition focus-within:border-tinta focus-within:shadow-[0_0_0_4px_rgb(245_166_35/0.45)] hover:border-borde-fuerte">
+            <x-icono nombre="lupa" class="size-[18px] text-tenue" />
+            {{-- 16 px en móvil para que el teclado no haga zoom en iPhone; 14 px (Figma) desde sm --}}
+            <input id="q" name="q" type="search" value="{{ $q }}" enterkeyhint="search" autocomplete="off" placeholder="Buscar"
+                class="min-w-0 flex-1 bg-transparent font-mono text-base outline-none focus-visible:outline-none focus-visible:shadow-none sm:text-sm">
         </div>
 
-        <x-barra-filtros :opciones="$filtros" :actual="request('tipo', '')" />
+        <x-barra-filtros :opciones="$filtros" :actual="request('tipo', '')" class="pb-6" />
     </form>
 
-    <section aria-labelledby="titulo-resultados" class="mt-10 flex flex-col gap-5">
-        <div class="flex items-baseline gap-2">
-            <h2 id="titulo-resultados" class="font-display text-xl tracking-titulo">Resultados</h2>
-            <span class="font-mono text-xs">[{{ $total ?? 0 }}]</span>
-        </div>
+    <section aria-label="Resultados" class="flex flex-col gap-3.5">
+        <x-titulo-seccion titulo="Resultados" :contador="$total ?? 0" />
 
         @if ($q === '')
             <x-estado-vacio titulo="Escribe para buscar"

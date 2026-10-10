@@ -12,7 +12,7 @@
 --}}
 @props(['encabezado' => null])
 
-<div {{ $attributes->merge(['class' => 'overflow-x-auto rounded-tarjeta bg-superficie shadow-tarjeta']) }}>
+<div {{ $attributes->merge(['class' => 'overflow-x-auto rounded-tarjeta bg-superficie']) }}>
     <table class="w-full border-collapse text-left text-sm
         [&_th]:px-4 [&_th]:py-3 [&_th]:font-mono [&_th]:text-xs [&_th]:font-normal [&_th]:whitespace-nowrap [&_th]:text-tenue
         [&_td]:px-4 [&_td]:py-3.5 [&_td]:align-middle

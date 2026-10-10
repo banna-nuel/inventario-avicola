@@ -50,11 +50,23 @@
     /* Naranja: solo acento mínimo (foco, ítem activo de la navegación, stock bajo) */
     --color-acento: #f5a623;
     --color-peligro: #d4183d;
+    /* Fondo de las miniaturas dentro de las tarjetas (CollectionCard del Figma) */
+    --color-miniatura: #f3f4f6;
 
     /* Tipografías */
     --font-display: "Platypi", Georgia, serif;
     --font-sans: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
     --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+
+    /* Escala tipográfica del Figma: text-titulo (h1 50/60), text-seccion (20), text-micro (10) */
+    --text-titulo: 3.125rem;
+    --text-titulo--line-height: 3.75rem;
+    --text-titulo--letter-spacing: -0.03em;
+    --text-seccion: 1.25rem;
+    --text-seccion--line-height: 1.375rem;
+    --text-seccion--letter-spacing: -0.03em;
+    --text-micro: 0.625rem;
+    --text-micro--line-height: 0.9375rem;
 
     /* Radios */
     --radius-miniatura: 6px;
@@ -62,22 +74,27 @@
     --radius-campo: 14px;
     --radius-hoja: 24px;
 
-    /* Sombras */
+    /* Sombras: solo la barra flotante tiene sombra (las tarjetas del Figma son planas) */
     --shadow-nav: 0 4px 21px rgb(0 0 0 / 0.25);
-    --shadow-tarjeta: 0 1px 2px rgb(0 0 0 / 0.04);
 
     /* Movimiento: una sola curva "asentar" y duraciones cortas (feedback < 200 ms) */
     --ease-asentar: cubic-bezier(0.22, 1, 0.36, 1);
     --default-transition-duration: 140ms;
     --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 
-    /* Interletrado de los títulos en Platypi (-3 %) */
+    /* Interletrado de los títulos en Platypi (-3 %) y de los filtros en mono */
     --tracking-titulo: -0.03em;
+    --tracking-filtro: -0.22px;
 }
 
 @layer base {
     html {
         -webkit-text-size-adjust: 100%;
+        /* El Figma oculta las barras de scroll; aquí quedan finas y claras para no perder la pista de scroll con mouse */
+        scrollbar-width: thin;
+        scrollbar-color: rgb(0 0 0 / 0.2) transparent;
+        /* Reserva siempre el espacio del scroll: así la barra flotante no se corre entre páginas cortas y largas */
+        scrollbar-gutter: stable;
     }
 
     body {
@@ -102,6 +119,64 @@
     .spinner {
         @apply inline-block size-4 animate-spin rounded-full border-2 border-current border-r-transparent;
     }
+}
+
+/*
+ * Transiciones entre páginas (View Transitions entre documentos, solo CSS, sin JS).
+ * Al navegar, el navegador toma una "foto" de la página vieja y otra de la nueva y anima
+ * los elementos que tienen el mismo view-transition-name en las dos. Por eso el círculo
+ * negro de la barra (nav-activo) se desliza hasta el ítem de la página destino.
+ * Firefox y los navegadores sin soporte ignoran estas reglas y navegan normal.
+ * Con "reducir movimiento" activado en el sistema, la transición ni siquiera se activa.
+ */
+@media (prefers-reduced-motion: no-preference) {
+    @view-transition {
+        navigation: auto;
+    }
+}
+
+.vt-encabezado {
+    view-transition-name: encabezado;
+}
+
+.vt-contenido {
+    view-transition-name: contenido;
+}
+
+.vt-barra {
+    view-transition-name: barra;
+}
+
+.vt-nav-activo {
+    view-transition-name: nav-activo;
+}
+
+/* Cada ícono de la barra tiene su propio nombre para quedar por encima del círculo
+   mientras este se desliza (si no, el círculo los taparía durante la animación) */
+.vt-icono-inicio {
+    view-transition-name: nav-icono-inicio;
+}
+
+.vt-icono-dashboard {
+    view-transition-name: nav-icono-dashboard;
+}
+
+.vt-icono-buscar {
+    view-transition-name: nav-icono-buscar;
+}
+
+/* Lo que cambia de lugar viaja en ~320 ms con la curva "asentar" del Figma */
+::view-transition-group(*) {
+    animation-duration: 320ms;
+    animation-timing-function: var(--ease-asentar);
+}
+
+/* El contenido (y el fondo) solo se funden, rápido: 140 ms */
+::view-transition-old(contenido),
+::view-transition-new(contenido),
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 140ms;
 }
 
 /* Respeta a quien pidió menos movimiento en su sistema operativo */
