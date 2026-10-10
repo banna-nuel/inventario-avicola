@@ -4,9 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoriaController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// La raíz lleva a /home; si no hay sesión, el middleware 'auth' manda al login
+Route::redirect('/', '/home');
 
 // El middleware 'auth' redirige a la ruta llamada 'login' cuando no hay sesión
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
