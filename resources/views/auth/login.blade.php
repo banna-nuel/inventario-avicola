@@ -1,26 +1,21 @@
-use Route::resource('categorias', CategoriaController::class)->except(['show']);
-<!DOCTYPE html>
-<html lang="en">
+@extends('layouts.invitado')
+@section('title', 'Iniciar sesión')
+@section('content')
+    <div class="flex w-full max-w-sm flex-col gap-10">
+        <div class="flex flex-col items-center gap-4 text-center">
+            <p class="font-mono text-xs text-tenue">Iniciar sesión</p>
+            <h1 class="font-display text-4xl leading-tight font-light tracking-titulo sm:text-5xl">Inventario Avícola</h1>
+            <p class="font-mono text-xs text-tenue">Control de stock, entradas y salidas</p>
+        </div>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    <title>login</title>
-</head>
+        <form action="/login" method="POST" class="flex flex-col gap-5" novalidate>
+            @csrf
 
-<body class="flex min-h-screen justify-center items-center bg-[#000000]">
-    <form class="flex gap-4 flex-col" action="/login" method="POST">
-        @csrf
-        <input class="border-[#333333] bg-[#1A1A1A] text-[#FFFFFF] rounded p-2 w-full" name="email" type="email"
-            placeholder="gmail">
-        @error('email')
-            <p class="text-[#ffffff]"> {{ $message }} </p>
-        @enderror
-        <input class="border-[#333333] bg-[#1A1A1A] text-[#FFFFFF] rounded p-2 w-full" name="password" type="password"
-            placeholder="password">
-        <button class=" bg-[#F5B122] text-black p-2 rounded w-full font-semibold" type="submit">Login</button>
-    </form>
-</body>
+            <x-campo etiqueta="Correo electrónico" name="email" tipo="email" autocomplete="email" autofocus required />
 
-</html>
+            <x-campo etiqueta="Contraseña" name="password" tipo="password" autocomplete="current-password" required />
+
+            <x-boton class="mt-3 w-full" cargando="Entrando…">Entrar</x-boton>
+        </form>
+    </div>
+@endsection

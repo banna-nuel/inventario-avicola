@@ -46,6 +46,13 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'activo' => 'boolean',
         ];
+    }
+
+    // Atajo para las vistas y los permisos: auth()->user()->esAdmin()
+    public function esAdmin(): bool
+    {
+        return $this->rol === 'admin';
     }
 }

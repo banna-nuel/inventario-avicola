@@ -1,0 +1,8 @@
+Fuentes autoalojadas (subconjunto "latin" descargado de Google Fonts, formato woff2).
+Todas se distribuyen bajo la SIL Open Font License 1.1: https://openfontlicense.org
+
+- Platypi (variable 300–800) ............ platypi-variable.woff2       — títulos
+- Host Grotesk (variable 400–500) ....... host-grotesk-variable.woff2  — texto general
+- IBM Plex Mono 400 y 500 ............... ibm-plex-mono-400/500.woff2 — etiquetas y datos
+
+Se declaran con @font-face en resources/css/input.css.
