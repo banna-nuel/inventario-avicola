@@ -30,7 +30,7 @@ class InterfazTest extends TestCase
             ->assertRedirect('/login');
 
         $this->get('/login')
-            ->assertSee('Credenciales incorrectas')
+            ->assertSee('Estas credenciales no coinciden con nuestros registros.')
             ->assertSee('aria-invalid="true"', false);
     }
 

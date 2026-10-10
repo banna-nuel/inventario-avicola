@@ -11,7 +11,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Alias para usar en las rutas: ->middleware('role:admin') y ->middleware('activo')
+        $middleware->alias([
+            'role' => \App\Http\Middleware\VerificarRol::class,
+            'activo' => \App\Http\Middleware\UsuarioActivo::class,
+        ]);
+
+        // Sin sesión se va al login; con sesión, /login lleva a /home
+        $middleware->redirectGuestsTo('/login');
+        $middleware->redirectUsersTo('/home');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
