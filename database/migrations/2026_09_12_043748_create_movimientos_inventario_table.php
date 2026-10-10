@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('movimientos_inventario', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained('productos');
+            $table->foreignId('producto_id')->constrained('productos');
             $table->foreignId('usuario_id')->constrained('users');
             $table->enum('tipo', ['entrada', 'salida']);
             $table->decimal('cantidad', 10, 2);

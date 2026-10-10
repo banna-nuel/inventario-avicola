@@ -9,8 +9,8 @@ class Producto extends Model
     protected $fillable = [
        'nombre',
        'categoria_id',
-       'unidad_media',
-       'stock_anual',
+       'unidad_medida',
+       'stock_actual',
        'stock_minimo',
        'activo'
     ];

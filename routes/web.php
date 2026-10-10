@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoriaController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -23,5 +24,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/search', function () {
         return view('search');
     });
+
+    Route::resource('categorias', CategoriaController::class)->except(['show']);
 });
 

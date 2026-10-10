@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('nombre', 150);
             $table->foreignId('categoria_id')->constrained('categorias');
-            $table->string('unidad_media', 20);
+            $table->string('unidad_medida', 20);
             $table->decimal('stock_actual', 10, 2)->default(0);
             $table->decimal('stock_minimo', 10, 2);
             $table->boolean('activo')->default(true);

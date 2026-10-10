@@ -10,7 +10,7 @@ class Categoria extends Model
         'nombre'
     ];
 
-    public function producto(){
+    public function productos(){
         return $this->hasMany(Producto::class);
     }
 }
