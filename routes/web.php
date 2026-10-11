@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProximamenteController;
 use Illuminate\Support\Facades\Route;
@@ -43,10 +44,10 @@ Route::middleware(['auth', 'activo'])->group(function () {
     // Productos: el encargado solo ve el listado
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
 
-    // Movimientos: los dos roles registran entradas y salidas (Fase 5)
-    Route::get('/movimientos', [ProximamenteController::class, 'mostrar'])->name('movimientos.index');
-    Route::get('/movimientos/create', [ProximamenteController::class, 'mostrar'])->name('movimientos.create');
-    Route::post('/movimientos', [ProximamenteController::class, 'guardar'])->name('movimientos.store');
+    // Movimientos: los dos roles registran entradas y salidas (inmutables: RN-09)
+    Route::get('/movimientos', [MovimientoController::class, 'index'])->name('movimientos.index');
+    Route::get('/movimientos/create', [MovimientoController::class, 'create'])->name('movimientos.create');
+    Route::post('/movimientos', [MovimientoController::class, 'store'])->name('movimientos.store');
 
     // ---- Solo administrador ----
     Route::middleware('role:admin')->group(function () {

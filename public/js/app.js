@@ -158,14 +158,69 @@ document.addEventListener('click', function (evento) {
     }
 });
 
-// Filtros: un <select data-enviar-al-cambiar> aplica el filtro apenas se elige una opción
+// 4) Filtros: un <select data-enviar-al-cambiar> aplica el filtro apenas se elige una opción
 document.addEventListener('change', function (evento) {
     if (evento.target.matches('[data-enviar-al-cambiar]')) {
         evento.target.form.requestSubmit();
     }
 });
 
-// 4) Cerrar mensajes flash con el botón ×
+// 5) Hoja "Nuevo movimiento" (movimientos/create.blade.php): antes de guardar, muestra el
+//    stock del producto elegido y cómo queda con la cantidad escrita. Es solo una ayuda:
+//    la validación real (RN-01) la hace el servidor.
+const formularioMovimiento = document.querySelector('[data-movimiento]');
+
+// 1250.5 → "1.250,5 kilogramos" (igual que UnidadMedida::cantidad en PHP)
+function cantidadConUnidad(numero, opcion) {
+    const texto = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 }).format(numero);
+    return texto + ' ' + (numero === 1 ? opcion.dataset.singular : opcion.dataset.unidad);
+}
+
+function actualizarResumen() {
+    const resumen = formularioMovimiento.querySelector('[data-resumen]');
+    const opcion = formularioMovimiento.elements.producto_id.selectedOptions[0];
+
+    if (!opcion || !opcion.value) {
+        resumen.textContent = 'Elige un producto para ver su stock.';
+        resumen.dataset.estado = '';
+        return;
+    }
+
+    const stock = parseFloat(opcion.dataset.stock);
+    const minimo = parseFloat(opcion.dataset.minimo);
+    const tipo = formularioMovimiento.querySelector('[name="tipo"]:checked');
+    const cantidad = parseFloat(formularioMovimiento.elements.cantidad.value.replace(',', '.'));
+
+    let texto = 'Stock actual: ' + cantidadConUnidad(stock, opcion) + ' · mínimo ' + cantidadConUnidad(minimo, opcion);
+    let estado = '';
+
+    if (tipo && cantidad > 0) {
+        // Redondeo a 2 decimales para evitar restos como 0.30000000000000004
+        const queda = Math.round((tipo.value === 'entrada' ? stock + cantidad : stock - cantidad) * 100) / 100;
+
+        if (queda < 0) {
+            texto = 'No alcanza: hay ' + cantidadConUnidad(stock, opcion) + '.';
+            estado = 'insuficiente';
+        } else {
+            texto = 'Quedarán ' + cantidadConUnidad(queda, opcion);
+            if (queda < minimo) {
+                texto += ' · bajo el mínimo (' + cantidadConUnidad(minimo, opcion) + ')';
+                estado = 'bajo';
+            }
+        }
+    }
+
+    resumen.textContent = texto;
+    resumen.dataset.estado = estado;   // el color sale del CSS según data-estado
+}
+
+if (formularioMovimiento) {
+    formularioMovimiento.addEventListener('input', actualizarResumen);
+    formularioMovimiento.addEventListener('change', actualizarResumen);
+    actualizarResumen();
+}
+
+// 6) Cerrar mensajes flash con el botón ×
 document.addEventListener('click', function (evento) {
     const cerrar = evento.target.closest('[data-cerrar-alerta]');
     if (cerrar) {

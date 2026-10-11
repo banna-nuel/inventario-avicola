@@ -13,6 +13,7 @@
         'alerta' => 'bg-acento text-tinta',
         'peligro' => 'bg-peligro text-superficie',
         'inactivo' => 'bg-deshabilitado text-tinta',
+        'oscuro' => 'bg-tinta text-superficie',
     ];
 @endphp
 

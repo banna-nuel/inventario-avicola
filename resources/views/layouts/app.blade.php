@@ -52,6 +52,10 @@
         @if (session('error'))
             <x-alerta tipo="error" class="mt-2">{{ session('error') }}</x-alerta>
         @endif
+        {{-- Alerta de stock bajo al registrar un movimiento (MovimientoController) --}}
+        @if (session('aviso'))
+            <x-alerta tipo="aviso" class="mt-2">{{ session('aviso') }}</x-alerta>
+        @endif
 
         @yield('content')
     </main>

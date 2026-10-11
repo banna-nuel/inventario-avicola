@@ -11,6 +11,8 @@
     $estilos = [
         'exito' => ['bg-tinta text-superficie', 'check'],
         'error' => ['bg-superficie text-peligro border border-peligro', 'alerta'],
+        // Stock bajo: el naranja de acento con texto negro (10:1 de contraste)
+        'aviso' => ['bg-acento text-tinta', 'alerta'],
         'info' => ['bg-superficie text-tinta border border-borde-fuerte', 'alerta'],
     ];
     [$clases, $icono] = $estilos[$tipo];
@@ -18,7 +20,7 @@
 
 <div
     {{ $attributes->merge(['class' => 'flex items-start gap-3 rounded-campo px-4 py-3 text-sm '.$clases]) }}
-    role="{{ $tipo === 'error' ? 'alert' : 'status' }}"
+    role="{{ in_array($tipo, ['error', 'aviso']) ? 'alert' : 'status' }}"
     data-alerta
 >
     <x-icono :nombre="$icono" class="mt-0.5 size-4" />

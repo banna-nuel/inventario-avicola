@@ -61,9 +61,7 @@
                     <th class="hidden md:table-cell">Categoría</th>
                     <th class="text-right">Stock</th>
                     <th class="hidden text-right sm:table-cell">Mínimo</th>
-                    @if ($esAdmin)
-                        <th><span class="sr-only">Acciones</span></th>
-                    @endif
+                    <th><span class="sr-only">Acciones</span></th>
                 </tr>
             </x-slot:encabezado>
 
@@ -96,15 +94,25 @@
                         <span class="block font-mono text-micro font-medium text-tenue">{{ $producto->unidad_medida->nombrePara($producto->stock_actual) }}</span>
                     </td>
                     <td class="hidden text-right font-mono text-xs whitespace-nowrap sm:table-cell">{{ $minimo }}</td>
-                    @if ($esAdmin)
-                        <td class="px-2!">
-                            <a href="{{ route('productos.edit', ['producto' => $producto] + $filtros) }}" data-abre-hoja
-                                aria-label="Editar {{ $producto->nombre }}" title="Editar"
-                                class="flex size-10 items-center justify-center rounded-full transition hover:bg-fondo">
-                                <x-icono nombre="lapiz" class="size-[18px]" />
-                            </a>
-                        </td>
-                    @endif
+                    <td class="px-2!">
+                        <div class="flex justify-end">
+                            {{-- Registrar entrada o salida de este producto (los dos roles; solo si está activo) --}}
+                            @if ($producto->activo)
+                                <a href="{{ route('movimientos.create', ['producto_id' => $producto->id, 'desde' => 'productos']) }}"
+                                    aria-label="Registrar movimiento de {{ $producto->nombre }}" title="Registrar movimiento"
+                                    class="flex size-10 items-center justify-center rounded-full transition hover:bg-fondo">
+                                    <x-icono nombre="movimientos" class="size-[18px]" />
+                                </a>
+                            @endif
+                            @if ($esAdmin)
+                                <a href="{{ route('productos.edit', ['producto' => $producto] + $filtros) }}" data-abre-hoja
+                                    aria-label="Editar {{ $producto->nombre }}" title="Editar"
+                                    class="flex size-10 items-center justify-center rounded-full transition hover:bg-fondo">
+                                    <x-icono nombre="lapiz" class="size-[18px]" />
+                                </a>
+                            @endif
+                        </div>
+                    </td>
                 </tr>
             @endforeach
         </x-tabla>
