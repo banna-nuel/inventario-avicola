@@ -5,7 +5,8 @@
     {{-- Encabezado como "Collections" del Figma: título, conteo y botón circular + --}}
     <x-encabezado titulo="Categorías"
         :subtitulo="$categorias->count() . ' ' . ($categorias->count() === 1 ? 'categoría' : 'categorías')">
-        <x-boton :href="route('categorias.create')" tamano="icono" aria-label="Nueva categoría" title="Nueva categoría">
+        {{-- data-abre-hoja: al cerrar la hoja, el foco vuelve a este enlace (public/js/app.js) --}}
+        <x-boton :href="route('categorias.create')" tamano="icono" aria-label="Nueva categoría" title="Nueva categoría" data-abre-hoja>
             <x-icono nombre="mas" class="size-5" />
         </x-boton>
     </x-encabezado>
@@ -13,7 +14,7 @@
     @if ($categorias->isEmpty())
         <x-estado-vacio titulo="Aún no hay categorías"
             mensaje="Crea la primera para organizar los productos, por ejemplo: Alimento, Medicamentos o Vacunas.">
-            <x-boton :href="route('categorias.create')">Nueva categoría</x-boton>
+            <x-boton :href="route('categorias.create')" data-abre-hoja>Nueva categoría</x-boton>
         </x-estado-vacio>
     @else
         <x-tabla>
@@ -39,22 +40,42 @@
                     {{-- px-2! (con "!" = important) gana al padding general de x-tabla --}}
                     <td class="px-2!">
                         <div class="flex justify-end">
-                            <a href="{{ route('categorias.edit', $categoria) }}"
+                            <a href="{{ route('categorias.edit', $categoria) }}" data-abre-hoja
                                 aria-label="Editar {{ $categoria->nombre }}" title="Editar"
                                 class="flex size-10 items-center justify-center rounded-full transition hover:bg-fondo">
                                 <x-icono nombre="lapiz" class="size-[18px]" />
                             </a>
 
-                            {{-- Eliminar pide confirmación (data-confirmar, ver public/js/app.js) --}}
-                            <form action="{{ route('categorias.destroy', $categoria) }}" method="POST"
-                                data-confirmar="¿Eliminar la categoría «{{ $categoria->nombre }}»?">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" aria-label="Eliminar {{ $categoria->nombre }}" title="Eliminar"
-                                    class="flex size-10 items-center justify-center rounded-full text-peligro transition hover:bg-fondo">
-                                    <x-icono nombre="papelera" class="size-[18px]" />
-                                </button>
-                            </form>
+                            @if ($categoria->productos_count > 0)
+                                {{--
+                                    RN-03: con productos (activos o inactivos) no se puede eliminar.
+                                    aria-disabled (y no disabled) para que siga recibiendo foco y se pueda
+                                    leer el motivo, que aparece al pasar el mouse o al enfocarlo.
+                                    El servidor también lo valida (CategoriaController@destroy).
+                                --}}
+                                <span class="group relative flex">
+                                    <button type="button" aria-disabled="true" aria-label="Eliminar {{ $categoria->nombre }}"
+                                        aria-describedby="motivo-{{ $categoria->id }}"
+                                        class="flex size-10 cursor-not-allowed items-center justify-center rounded-full text-tinta/30">
+                                        <x-icono nombre="papelera" class="size-[18px]" />
+                                    </button>
+                                    <span id="motivo-{{ $categoria->id }}" role="tooltip"
+                                        class="pointer-events-none invisible absolute top-1/2 right-full mr-1 -translate-y-1/2 rounded-full bg-tinta px-3 py-1.5 font-mono text-micro font-medium whitespace-nowrap text-superficie opacity-0 transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+                                        Tiene {{ $textoProductos }}
+                                    </span>
+                                </span>
+                            @else
+                                {{-- Eliminar pide confirmación (data-confirmar, ver public/js/app.js) --}}
+                                <form action="{{ route('categorias.destroy', $categoria) }}" method="POST"
+                                    data-confirmar="¿Eliminar la categoría «{{ $categoria->nombre }}»?">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" aria-label="Eliminar {{ $categoria->nombre }}" title="Eliminar"
+                                        class="flex size-10 items-center justify-center rounded-full text-peligro transition hover:bg-fondo">
+                                        <x-icono nombre="papelera" class="size-[18px]" />
+                                    </button>
+                                </form>
+                            @endif
                         </div>
                     </td>
                 </tr>

@@ -66,21 +66,99 @@ document.addEventListener('input', function (evento) {
     }
 });
 
+// Enter en el campo grande guarda (no salta de línea)
 document.addEventListener('keydown', function (evento) {
-    // Enter en el campo grande guarda (no salta de línea)
     if (evento.key === 'Enter' && evento.target.matches('[data-campo-titulo]')) {
         evento.preventDefault();
         evento.target.form.requestSubmit();
     }
+});
 
-    // Esc cierra la hoja abierta
-    const hoja = document.querySelector('[data-hoja]');
-    if (evento.key === 'Escape' && hoja) {
-        window.location.href = hoja.dataset.cerrar;
+// 3) Hoja de formulario (components/hoja.blade.php): se comporta como un diálogo modal.
+//    - el foco empieza en el primer campo (o en el que tiene error)
+//    - Tab y Shift+Tab no salen de la hoja
+//    - Esc la cierra
+//    - al cerrarla (o guardar), el foco vuelve al enlace que la abrió
+const hoja = document.querySelector('[data-hoja]');
+const CAMPOS = 'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])';
+const ENFOCABLES = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), ' + CAMPOS;
+
+// sessionStorage puede fallar (modo privado estricto): sin él, solo se pierde el retorno del foco
+function recordar(clave, valor) {
+    try {
+        valor === null ? sessionStorage.removeItem(clave) : sessionStorage.setItem(clave, valor);
+    } catch (error) { /* sin memoria de sesión */ }
+}
+
+function recuperar(clave) {
+    try {
+        return sessionStorage.getItem(clave);
+    } catch (error) {
+        return null;
+    }
+}
+
+// Elementos de la hoja a los que llega Tab (visibles; de cada grupo de radios, solo el marcado)
+function enfocablesDeLaHoja() {
+    return Array.from(hoja.querySelectorAll(ENFOCABLES)).filter(function (elemento) {
+        const visible = elemento.getClientRects().length > 0;
+        const radioSinMarcar = elemento.type === 'radio' && !elemento.checked;
+        return visible && !radioSinMarcar;
+    });
+}
+
+if (hoja) {
+    // Primero el campo con error; si no, el marcado con data-foco-inicial; si no, el primer campo.
+    // (No se usa el atributo autofocus: este código ya decide dónde va el foco.)
+    const inicial = hoja.querySelector('[aria-invalid="true"]') || hoja.querySelector('[data-foco-inicial]') || hoja.querySelector(CAMPOS);
+    if (inicial) {
+        inicial.focus();
+    }
+
+    document.addEventListener('keydown', function (evento) {
+        if (evento.key === 'Escape') {
+            window.location.href = hoja.dataset.cerrar;
+            return;
+        }
+
+        if (evento.key !== 'Tab') {
+            return;
+        }
+
+        const enfocables = enfocablesDeLaHoja();
+        const primero = enfocables[0];
+        const ultimo = enfocables[enfocables.length - 1];
+        const fuera = !hoja.contains(document.activeElement);
+
+        if (evento.shiftKey && (document.activeElement === primero || fuera)) {
+            evento.preventDefault();
+            ultimo.focus();
+        } else if (!evento.shiftKey && (document.activeElement === ultimo || fuera)) {
+            evento.preventDefault();
+            primero.focus();
+        }
+    });
+} else {
+    // Página sin hoja: si venimos de cerrar una, devolvemos el foco al enlace que la abrió
+    const origen = recuperar('hoja-origen');
+    if (origen) {
+        recordar('hoja-origen', null);
+        const enlace = document.querySelector('[data-abre-hoja][href="' + CSS.escape(origen) + '"]');
+        if (enlace) {
+            enlace.focus();
+        }
+    }
+}
+
+// Los enlaces que abren una hoja llevan data-abre-hoja: guardamos cuál fue
+document.addEventListener('click', function (evento) {
+    const enlace = evento.target.closest('[data-abre-hoja]');
+    if (enlace) {
+        recordar('hoja-origen', enlace.getAttribute('href'));
     }
 });
 
-// 3) Cerrar mensajes flash con el botón ×
+// 4) Cerrar mensajes flash con el botón ×
 document.addEventListener('click', function (evento) {
     const cerrar = evento.target.closest('[data-cerrar-alerta]');
     if (cerrar) {

@@ -4,6 +4,10 @@
     - Escritorio (sm+): modal centrado con esquinas de 30 px y sombra suave.
     Se cierra con la flecha/X, tocando el velo de fondo o con la tecla Esc (public/js/app.js).
 
+    Accesible como diálogo modal (public/js/app.js): el foco empieza en el primer campo
+    (o en el que tiene error), Tab no sale de la hoja y, al cerrarla, el foco vuelve al
+    enlace que la abrió. Para eso, ese enlace lleva el atributo data-abre-hoja.
+
     Se usa dentro de @section('hoja') en una vista que extiende el listado, así el listado
     queda visible detrás (por ejemplo categorias/create.blade.php).
 

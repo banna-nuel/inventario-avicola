@@ -207,6 +207,35 @@ class CategoriaTest extends TestCase
         $this->get('/categorias')->assertSee('role="alert"', false)->assertSee('porque tiene 2 productos');
     }
 
+    public function test_con_productos_el_boton_eliminar_se_ve_deshabilitado_y_dice_cuantos_tiene(): void
+    {
+        $alimento = Categoria::create(['nombre' => 'Alimento']);
+        $this->crearProducto($alimento, 'Maíz');
+        $this->crearProducto($alimento, 'Soya')->update(['activo' => false]);   // los inactivos también cuentan
+        $vacunas = Categoria::create(['nombre' => 'Vacunas']);
+
+        $this->actingAs($this->admin)->get('/categorias')
+            ->assertOk()
+            // Alimento: botón con aria-disabled y el motivo, sin formulario para eliminar
+            ->assertSee('aria-disabled="true"', false)
+            ->assertSee('Tiene 2 productos')
+            ->assertDontSee('action="'.route('categorias.destroy', $alimento).'"', false)
+            // Vacunas (sin productos): sí se puede eliminar
+            ->assertSee('action="'.route('categorias.destroy', $vacunas).'"', false);
+    }
+
+    public function test_con_la_hoja_abierta_todo_lo_de_atras_queda_inerte(): void
+    {
+        $html = $this->actingAs($this->admin)->get('/categorias/create')->getContent();
+
+        // Encabezado, contenido y barra flotante: la hoja es modal
+        $this->assertSame(3, preg_match_all('/<(header|main|nav)\b[^>]*\binert\b/', $html));
+        $this->assertStringNotContainsString('Saltar al contenido', $html);
+
+        // Sin hoja, nada está inerte
+        $this->assertStringNotContainsString(' inert', $this->get('/categorias')->getContent());
+    }
+
     public function test_una_categoria_que_no_existe_da_404(): void
     {
         $this->actingAs($this->admin);

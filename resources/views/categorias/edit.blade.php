@@ -10,7 +10,7 @@
 
             <div class="flex flex-1 flex-col justify-center px-5 sm:px-10">
                 <x-campo-titulo name="nombre" etiqueta="Nombre de la categoría" placeholder="Nombre"
-                    :valor="$categoria->nombre" maximo="100" autofocus />
+                    :valor="$categoria->nombre" maximo="100" />
 
                 @php
                     $productos = $categorias->firstWhere('id', $categoria->id)?->productos_count ?? 0;

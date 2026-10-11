@@ -9,7 +9,7 @@
 
             <div class="flex flex-1 flex-col justify-center px-5 sm:px-10">
                 <x-campo-titulo name="nombre" etiqueta="Nombre de la categoría" placeholder="Nombre"
-                    maximo="100" autofocus />
+                    maximo="100" />
             </div>
 
             {{-- Mientras el nombre está vacío, el botón se ve gris (como en el Figma) --}}
