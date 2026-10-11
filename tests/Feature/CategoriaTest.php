@@ -26,7 +26,7 @@ class CategoriaTest extends TestCase
         return Producto::create([
             'nombre' => $nombre,
             'categoria_id' => $categoria->id,
-            'unidad_medida' => 'kg',
+            'unidad_medida' => 'kilogramos',
             'stock_minimo' => 10,
         ]);
     }

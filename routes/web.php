@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProximamenteController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,8 +40,8 @@ Route::middleware(['auth', 'activo'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::view('/search', 'search')->name('search');
 
-    // Productos: el encargado solo ve el listado (Fase 4)
-    Route::get('/productos', [ProximamenteController::class, 'mostrar'])->name('productos.index');
+    // Productos: el encargado solo ve el listado
+    Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
 
     // Movimientos: los dos roles registran entradas y salidas (Fase 5)
     Route::get('/movimientos', [ProximamenteController::class, 'mostrar'])->name('movimientos.index');
@@ -51,12 +52,12 @@ Route::middleware(['auth', 'activo'])->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::resource('categorias', CategoriaController::class)->except(['show']);
 
-        // Productos: crear, editar y activar/desactivar (Fase 4)
-        Route::get('/productos/create', [ProximamenteController::class, 'mostrar'])->name('productos.create');
-        Route::post('/productos', [ProximamenteController::class, 'guardar'])->name('productos.store');
-        Route::get('/productos/{producto}/edit', [ProximamenteController::class, 'mostrar'])->name('productos.edit');
-        Route::put('/productos/{producto}', [ProximamenteController::class, 'guardar'])->name('productos.update');
-        Route::patch('/productos/{producto}/estado', [ProximamenteController::class, 'guardar'])->name('productos.cambiar-estado');
+        // Productos: crear, editar y activar/desactivar (no hay destroy: RN-03)
+        Route::get('/productos/create', [ProductoController::class, 'create'])->name('productos.create');
+        Route::post('/productos', [ProductoController::class, 'store'])->name('productos.store');
+        Route::get('/productos/{producto}/edit', [ProductoController::class, 'edit'])->name('productos.edit');
+        Route::put('/productos/{producto}', [ProductoController::class, 'update'])->name('productos.update');
+        Route::patch('/productos/{producto}/estado', [ProductoController::class, 'cambiarEstado'])->name('productos.cambiar-estado');
 
         // Usuarios (Fase 7)
         Route::get('/usuarios', [ProximamenteController::class, 'mostrar'])->name('usuarios.index');

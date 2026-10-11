@@ -158,6 +158,13 @@ document.addEventListener('click', function (evento) {
     }
 });
 
+// Filtros: un <select data-enviar-al-cambiar> aplica el filtro apenas se elige una opción
+document.addEventListener('change', function (evento) {
+    if (evento.target.matches('[data-enviar-al-cambiar]')) {
+        evento.target.form.requestSubmit();
+    }
+});
+
 // 4) Cerrar mensajes flash con el botón ×
 document.addEventListener('click', function (evento) {
     const cerrar = evento.target.closest('[data-cerrar-alerta]');

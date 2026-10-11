@@ -38,7 +38,7 @@ class RutasTest extends TestCase
         $this->producto = Producto::create([
             'nombre' => 'Maíz amarillo',
             'categoria_id' => $this->categoria->id,
-            'unidad_medida' => 'kg',
+            'unidad_medida' => 'kilogramos',
             'stock_minimo' => 10,
         ]);
     }
