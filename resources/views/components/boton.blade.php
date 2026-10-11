@@ -4,7 +4,7 @@
     'cargando' es el texto que se muestra mientras se envía el formulario.
 
     <x-boton>Guardar</x-boton>
-    <x-boton variante="secundario" href="/categorias">Cancelar</x-boton>
+    <x-boton variante="secundario" :href="route('categorias.index')">Cancelar</x-boton>
     <x-boton cargando="Guardando…">Guardar</x-boton>
 --}}
 @props([

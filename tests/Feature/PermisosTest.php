@@ -79,6 +79,6 @@ class PermisosTest extends TestCase
         $this->get('/prueba-419')
             ->assertStatus(419)
             ->assertSee('Tu sesión expiró')
-            ->assertSee('href="/login"', false);
+            ->assertSee('href="'.route('login').'"', false);
     }
 }

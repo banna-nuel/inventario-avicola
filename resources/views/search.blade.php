@@ -14,7 +14,7 @@
     {{-- Como en el Figma, Search no muestra título: la barra va directo bajo el encabezado --}}
     <h1 class="sr-only">Buscar</h1>
 
-    <form action="/search" method="GET" role="search" class="pt-2.5">
+    <form action="{{ route('search') }}" method="GET" role="search" class="pt-2.5">
         {{-- Conserva el filtro elegido al hacer una nueva búsqueda --}}
         @if (request('tipo'))
             <input type="hidden" name="tipo" value="{{ request('tipo') }}">

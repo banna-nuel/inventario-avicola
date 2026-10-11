@@ -3,7 +3,7 @@
     Con href se vuelve un enlace completo con estado hover/press.
 
     <x-tarjeta class="p-6">...</x-tarjeta>
-    <x-tarjeta href="/productos">...</x-tarjeta>
+    <x-tarjeta :href="route('productos.index')">...</x-tarjeta>
 --}}
 @props(['href' => null])
 

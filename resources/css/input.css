@@ -148,17 +148,18 @@
 }
 
 /* Cada ícono de la barra tiene su propio nombre para quedar por encima del círculo
-   mientras este se desliza (si no, el círculo los taparía durante la animación) */
-.vt-icono-inicio {
-    view-transition-name: nav-icono-inicio;
+   mientras este se desliza (si no, el círculo los taparía durante la animación).
+   La clase es "vt-icono-" + el nombre de la ruta (config/navegacion.php). */
+.vt-icono-home {
+    view-transition-name: nav-icono-home;
 }
 
 .vt-icono-dashboard {
     view-transition-name: nav-icono-dashboard;
 }
 
-.vt-icono-buscar {
-    view-transition-name: nav-icono-buscar;
+.vt-icono-search {
+    view-transition-name: nav-icono-search;
 }
 
 /* Hoja de formulario (components/hoja.blade.php) y su velo oscuro */
@@ -208,9 +209,9 @@
 
 ::view-transition-group(barra),
 ::view-transition-group(nav-activo),
-::view-transition-group(nav-icono-inicio),
+::view-transition-group(nav-icono-home),
 ::view-transition-group(nav-icono-dashboard),
-::view-transition-group(nav-icono-buscar) {
+::view-transition-group(nav-icono-search) {
     z-index: 3;
 }
 

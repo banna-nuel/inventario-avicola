@@ -1,30 +1,75 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\ProximamenteController;
+use Illuminate\Support\Facades\Route;
 
-// La raíz lleva a /home; si no hay sesión, el middleware 'auth' manda al login
-Route::redirect('/', '/home');
+/*
+ * Mapa de rutas de la v1. Toda ruta tiene nombre (recurso.accion) y en el código se usa
+ * route('nombre'), nunca la URL escrita a mano. La matriz rol × ruta se prueba en
+ * tests/Feature/RutasTest.php: si agregas o cambias una ruta, actualiza ese test.
+ *
+ * Las rutas de los módulos pendientes apuntan a ProximamenteController; cada fase
+ * las cambia por su controlador real.
+ *
+ * No existen a propósito (responden 404 o 405):
+ * - show en ningún recurso
+ * - destroy de productos y de usuarios: se desactivan (RN-03)
+ * - edit, update y destroy de movimientos: son inmutables (RN-09)
+ */
 
-// Solo para quien NO ha iniciado sesión ('guest'); con sesión, /login redirige a /home
+// La raíz lleva a Inicio; si no hay sesión, el middleware 'auth' manda al login
+Route::get('/', fn () => redirect()->route('home'))->name('raiz');
+
+// Solo para quien NO ha iniciado sesión ('guest'); con sesión, /login lleva a Inicio
 Route::middleware('guest')->group(function () {
     // El middleware 'auth' redirige a la ruta llamada 'login' cuando no hay sesión
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->name('login.entrar');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Con sesión iniciada y cuenta activa (matriz de permisos del PROMPT, sección 5)
 Route::middleware(['auth', 'activo'])->group(function () {
-    // Administrador y encargado
+
+    // ---- Administrador y encargado ----
     Route::view('/home', 'home')->name('home');
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::view('/search', 'search')->name('search');
 
-    // Solo administrador
+    // Productos: el encargado solo ve el listado (Fase 4)
+    Route::get('/productos', [ProximamenteController::class, 'mostrar'])->name('productos.index');
+
+    // Movimientos: los dos roles registran entradas y salidas (Fase 5)
+    Route::get('/movimientos', [ProximamenteController::class, 'mostrar'])->name('movimientos.index');
+    Route::get('/movimientos/create', [ProximamenteController::class, 'mostrar'])->name('movimientos.create');
+    Route::post('/movimientos', [ProximamenteController::class, 'guardar'])->name('movimientos.store');
+
+    // ---- Solo administrador ----
     Route::middleware('role:admin')->group(function () {
         Route::resource('categorias', CategoriaController::class)->except(['show']);
+
+        // Productos: crear, editar y activar/desactivar (Fase 4)
+        Route::get('/productos/create', [ProximamenteController::class, 'mostrar'])->name('productos.create');
+        Route::post('/productos', [ProximamenteController::class, 'guardar'])->name('productos.store');
+        Route::get('/productos/{producto}/edit', [ProximamenteController::class, 'mostrar'])->name('productos.edit');
+        Route::put('/productos/{producto}', [ProximamenteController::class, 'guardar'])->name('productos.update');
+        Route::patch('/productos/{producto}/estado', [ProximamenteController::class, 'guardar'])->name('productos.cambiar-estado');
+
+        // Usuarios (Fase 7)
+        Route::get('/usuarios', [ProximamenteController::class, 'mostrar'])->name('usuarios.index');
+        Route::get('/usuarios/create', [ProximamenteController::class, 'mostrar'])->name('usuarios.create');
+        Route::post('/usuarios', [ProximamenteController::class, 'guardar'])->name('usuarios.store');
+        Route::get('/usuarios/{usuario}/edit', [ProximamenteController::class, 'mostrar'])->name('usuarios.edit');
+        Route::put('/usuarios/{usuario}', [ProximamenteController::class, 'guardar'])->name('usuarios.update');
+        Route::patch('/usuarios/{usuario}/estado', [ProximamenteController::class, 'guardar'])->name('usuarios.cambiar-estado');
+
+        // Reportes en pantalla (Fase 8)
+        Route::get('/reportes', [ProximamenteController::class, 'mostrar'])->name('reportes.index');
+        Route::get('/reportes/stock-por-categoria', [ProximamenteController::class, 'mostrar'])->name('reportes.stock-por-categoria');
+        Route::get('/reportes/stock-bajo', [ProximamenteController::class, 'mostrar'])->name('reportes.stock-bajo');
+        Route::get('/reportes/mas-movidos', [ProximamenteController::class, 'mostrar'])->name('reportes.mas-movidos');
     });
 });

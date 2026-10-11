@@ -3,7 +3,7 @@
     título grande en Platypi 50 px, una línea mono debajo y, opcionalmente, acciones.
 
     <x-encabezado titulo="Categorías" subtitulo="6 categorías">
-        <x-boton href="/categorias/create">Nueva</x-boton>
+        <x-boton :href="route('categorias.create')">Nueva</x-boton>
     </x-encabezado>
 --}}
 @props(['titulo', 'subtitulo' => null])

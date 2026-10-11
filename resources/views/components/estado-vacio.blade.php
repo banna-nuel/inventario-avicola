@@ -3,7 +3,7 @@
     El contenido del slot (opcional) es la acción sugerida, por ejemplo un botón "Crear".
 
     <x-estado-vacio titulo="Sin categorías" mensaje="Crea la primera para organizar los productos.">
-        <x-boton href="/categorias/create">Nueva categoría</x-boton>
+        <x-boton :href="route('categorias.create')">Nueva categoría</x-boton>
     </x-estado-vacio>
 --}}
 @props(['titulo', 'mensaje' => null])

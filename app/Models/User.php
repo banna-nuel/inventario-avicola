@@ -55,4 +55,13 @@ class User extends Authenticatable
     {
         return $this->rol === 'admin';
     }
+
+    // Enlaces de config/navegacion.php ('barra' o 'modulos') que este usuario puede ver según su rol
+    public function enlaces(string $grupo): array
+    {
+        return array_values(array_filter(
+            config("navegacion.{$grupo}"),
+            fn (array $enlace) => in_array($this->rol, $enlace['roles'], true)
+        ));
+    }
 }

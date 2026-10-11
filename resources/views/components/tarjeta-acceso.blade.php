@@ -3,7 +3,7 @@
     arriba el nombre (Platypi 20) y una línea mono de 10 px; abajo una franja de 107 px
     con una "miniatura" gris que muestra el ícono del módulo.
 
-    <x-tarjeta-acceso href="/productos" titulo="Productos" descripcion="Stock y unidades" icono="caja" />
+    <x-tarjeta-acceso :href="route('productos.index')" titulo="Productos" descripcion="Stock y unidades" icono="caja" />
 --}}
 @props(['href', 'titulo', 'descripcion', 'icono'])
 

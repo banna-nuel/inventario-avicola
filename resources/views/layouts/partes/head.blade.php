@@ -12,12 +12,13 @@
     Activa las transiciones entre páginas (View Transitions). Va aquí, inline, y no en app.css:
     el navegador decide si anima mirando esta regla en la página nueva, y a veces lo hacía
     antes de terminar de cargar app.css, así que la transición se cancelaba (~16 % de las veces).
-    Con "reducir movimiento" activado en el sistema, no se anima.
+    Solo se activa si la persona NO pidió "reducir movimiento" en su sistema.
 --}}
-{{-- "@@" es como se escribe una "@" literal en Blade (si no, la tomaría como directiva) --}}
+{{-- El bloque "verbatim" hace que Blade deje el CSS tal cual (si no, tomaría las arrobas como directivas) --}}
 <style>
-    @@view-transition { navigation: auto; }
-    @@media (prefers-reduced-motion: reduce) { @@view-transition { navigation: none; } }
+    @verbatim
+    @media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }
+    @endverbatim
 </style>
 
 @php

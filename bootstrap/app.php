@@ -17,9 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'activo' => \App\Http\Middleware\UsuarioActivo::class,
         ]);
 
-        // Sin sesión se va al login; con sesión, /login lleva a /home
-        $middleware->redirectGuestsTo('/login');
-        $middleware->redirectUsersTo('/home');
+        // Sin sesión se va al login; con sesión, /login lleva a Inicio.
+        // Van dentro de fn () porque aquí las rutas todavía no están cargadas.
+        $middleware->redirectGuestsTo(fn () => route('login'));
+        $middleware->redirectUsersTo(fn () => route('home'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -8,7 +8,7 @@
             <p class="font-mono text-xs text-tenue">Control de stock, entradas y salidas</p>
         </div>
 
-        <form action="/login" method="POST" class="flex flex-col gap-5" novalidate>
+        <form action="{{ route('login.entrar') }}" method="POST" class="flex flex-col gap-5" novalidate>
             @csrf
 
             <x-campo etiqueta="Correo electrónico" name="email" tipo="email" autocomplete="email" autofocus required />

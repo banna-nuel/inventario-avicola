@@ -3,7 +3,12 @@
 
     <x-pagina-error codigo="403" titulo="No tienes permiso" mensaje="..." />
 --}}
-@props(['codigo', 'titulo', 'mensaje', 'enlace' => '/home', 'textoEnlace' => 'Volver al inicio'])
+@props(['codigo', 'titulo', 'mensaje', 'enlace' => null, 'textoEnlace' => 'Volver al inicio'])
+
+@php
+    // Por defecto vuelve a Inicio (si no hay sesión, Inicio manda al login)
+    $enlace ??= route('home');
+@endphp
 
 <div class="flex w-full max-w-md flex-col items-center gap-[22px] text-center">
     <p class="font-mono text-xs text-tenue">Error {{ $codigo }}</p>

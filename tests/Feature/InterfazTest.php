@@ -41,11 +41,11 @@ class InterfazTest extends TestCase
         $this->actingAs($admin)->get('/home')
             ->assertOk()
             ->assertSee('Administrador')
-            ->assertSee('href="/productos"', false)
-            ->assertSee('href="/movimientos"', false)
-            ->assertSee('href="/categorias"', false)
-            ->assertSee('href="/usuarios"', false)
-            ->assertSee('href="/reportes"', false);
+            ->assertSee('href="'.route('productos.index').'"', false)
+            ->assertSee('href="'.route('movimientos.index').'"', false)
+            ->assertSee('href="'.route('categorias.index').'"', false)
+            ->assertSee('href="'.route('usuarios.index').'"', false)
+            ->assertSee('href="'.route('reportes.index').'"', false);
     }
 
     public function test_el_encargado_solo_ve_productos_y_movimientos(): void
@@ -55,11 +55,11 @@ class InterfazTest extends TestCase
         $this->actingAs($encargado)->get('/home')
             ->assertOk()
             ->assertSee('Encargado de inventario')
-            ->assertSee('href="/productos"', false)
-            ->assertSee('href="/movimientos"', false)
-            ->assertDontSee('href="/categorias"', false)
-            ->assertDontSee('href="/usuarios"', false)
-            ->assertDontSee('href="/reportes"', false);
+            ->assertSee('href="'.route('productos.index').'"', false)
+            ->assertSee('href="'.route('movimientos.index').'"', false)
+            ->assertDontSee('href="'.route('categorias.index').'"', false)
+            ->assertDontSee('href="'.route('usuarios.index').'"', false)
+            ->assertDontSee('href="'.route('reportes.index').'"', false);
     }
 
     public function test_la_navegacion_marca_la_pagina_activa(): void
@@ -72,7 +72,7 @@ class InterfazTest extends TestCase
             ->getContent();
 
         // Solo el enlace de Dashboard lleva aria-current="page"
-        $this->assertMatchesRegularExpression('/href="\/dashboard"[^>]*aria-current="page"/', $html);
+        $this->assertMatchesRegularExpression('/href="'.preg_quote(route('dashboard'), '/').'"[^>]*aria-current="page"/', $html);
         $this->assertSame(1, substr_count($html, 'aria-current="page"'));
     }
 
@@ -98,8 +98,22 @@ class InterfazTest extends TestCase
         $this->get('/login')->assertSee('@view-transition { navigation: auto; }', false);
 
         $this->actingAs(User::factory()->create())->get('/home')
-            ->assertSee('@view-transition { navigation: auto; }', false)
-            ->assertSee('@view-transition { navigation: none; }', false);
+            ->assertSee('@view-transition { navigation: auto; }', false);
+    }
+
+    public function test_las_transiciones_solo_se_activan_sin_reducir_movimiento(): void
+    {
+        $html = $this->actingAs(User::factory()->create())->get('/home')->getContent();
+
+        // La única regla @view-transition está dentro de @media (prefers-reduced-motion: no-preference)
+        $this->assertSame(1, substr_count($html, '@view-transition'));
+        $this->assertStringContainsString(
+            '@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }',
+            $html
+        );
+
+        // Y la hoja de estilos compilada no la vuelve a declarar por fuera
+        $this->assertStringNotContainsString('@view-transition', file_get_contents(public_path('css/app.css')));
     }
 
     public function test_una_pagina_fuera_de_la_barra_no_tiene_circulo_activo(): void

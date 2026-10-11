@@ -7,10 +7,13 @@
 
 {{-- Con una hoja abierta, el fondo no hace scroll --}}
 <body class="min-h-dvh @hasSection('hoja') overflow-hidden @endif">
-    <a href="#contenido"
-        class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-tinta focus:px-4 focus:py-2 focus:text-superficie">
-        Saltar al contenido
-    </a>
+    {{-- Con una hoja abierta el contenido está inerte, así que este enlace no se muestra --}}
+    @sectionMissing('hoja')
+        <a href="#contenido"
+            class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-tinta focus:px-4 focus:py-2 focus:text-superficie">
+            Saltar al contenido
+        </a>
+    @endif
 
     {{--
         Encabezado (TopBar del Figma): zona segura de 56 px arriba y una barra de 64 px
@@ -27,9 +30,9 @@
                 @endif
             </div>
 
-            <a href="/home" class="font-display text-xl leading-7 tracking-titulo whitespace-nowrap">Inventario Avícola</a>
+            <a href="{{ route('home') }}" class="font-display text-xl leading-7 tracking-titulo whitespace-nowrap">Inventario Avícola</a>
 
-            <form action="/logout" method="POST" class="-mt-1.5 size-10">
+            <form action="{{ route('logout') }}" method="POST" class="-mt-1.5 size-10">
                 @csrf
                 <button type="submit" aria-label="Cerrar sesión" title="Cerrar sesión"
                     class="flex size-10 items-center justify-center rounded-full transition hover:bg-superficie">
@@ -58,15 +61,13 @@
 
     {{-- Navegación flotante tipo píldora (BottomNav del Figma) --}}
     @php
-        $enlaces = [
-            ['url' => '/home', 'etiqueta' => 'Inicio', 'icono' => 'casa', 'vt' => 'vt-icono-inicio', 'activo' => request()->is('home')],
-            ['url' => '/dashboard', 'etiqueta' => 'Dashboard', 'icono' => 'panel', 'vt' => 'vt-icono-dashboard', 'activo' => request()->is('dashboard')],
-            ['url' => '/search', 'etiqueta' => 'Buscar', 'icono' => 'buscar', 'vt' => 'vt-icono-buscar', 'activo' => request()->is('search')],
-        ];
+        // Enlaces de la barra (config/navegacion.php)
+        $enlaces = auth()->user()->enlaces('barra');
         // Posición del ítem activo (0, 1 o 2); false si la página no está en la barra
-        $indiceActivo = collect($enlaces)->search(fn ($enlace) => $enlace['activo']);
+        $indiceActivo = collect($enlaces)->search(fn ($enlace) => request()->routeIs($enlace['ruta']));
     @endphp
-    <nav aria-label="Navegación principal"
+    {{-- Con una hoja abierta, la barra se sigue viendo pero queda inerte (la hoja es modal) --}}
+    <nav aria-label="Navegación principal" @hasSection('hoja') inert @endif
         class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2.5 pb-[max(34px,env(safe-area-inset-bottom))]">
         <div class="vt-barra pointer-events-auto relative rounded-full bg-tinta/60 p-2 shadow-nav backdrop-blur-lg">
             @if ($indiceActivo !== false)
@@ -83,12 +84,14 @@
             @endif
 
             <ul class="flex items-center gap-6">
-                @foreach ($enlaces as $enlace)
+                @foreach ($enlaces as $indice => $enlace)
+                    @php $activo = $indice === $indiceActivo; @endphp
                     <li>
-                        <a href="{{ $enlace['url'] }}" aria-label="{{ $enlace['etiqueta'] }}" title="{{ $enlace['etiqueta'] }}"
-                            @if ($enlace['activo']) aria-current="page" @endif
-                            class="relative z-10 flex size-[50px] items-center justify-center rounded-full text-superficie transition active:scale-90 {{ $enlace['activo'] ? '' : 'hover:bg-superficie/15' }}">
-                            <x-icono :nombre="$enlace['icono']" :class="$enlace['vt']" />
+                        <a href="{{ route($enlace['ruta']) }}" aria-label="{{ $enlace['etiqueta'] }}" title="{{ $enlace['etiqueta'] }}"
+                            @if ($activo) aria-current="page" @endif
+                            class="relative z-10 flex size-[50px] items-center justify-center rounded-full text-superficie transition active:scale-90 {{ $activo ? '' : 'hover:bg-superficie/15' }}">
+                            {{-- vt-icono-home, vt-icono-dashboard... (ver resources/css/input.css) --}}
+                            <x-icono :nombre="$enlace['icono']" :class="'vt-icono-' . $enlace['ruta']" />
                         </a>
                     </li>
                 @endforeach
