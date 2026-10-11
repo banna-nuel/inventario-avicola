@@ -123,13 +123,24 @@ class UsuarioTest extends TestCase
         $this->assertTrue(Hash::check('clave-original', $ana->password));
     }
 
-    public function test_al_editar_con_contrasena_nueva_se_cambia(): void
+    public function test_al_editar_con_contrasena_nueva_se_cambia_y_se_puede_entrar_con_ella(): void
     {
         $this->actingAs($this->admin)
             ->put(route('usuarios.update', $this->encargado), $this->datos(['email' => 'ana@granja.com', 'password' => 'nueva-clave-1']))
             ->assertSessionHasNoErrors();
 
+        // Cifrada una sola vez (el cast 'hashed' del modelo; sin Hash::make a mano: evita el doble hash)
         $this->assertTrue(Hash::check('nueva-clave-1', $this->encargado->fresh()->password));
+
+        // Inicio de sesión real: la nueva sirve y la anterior ya no
+        $this->post(route('logout'));
+        $this->post(route('login.entrar'), ['email' => 'ana@granja.com', 'password' => 'clave-original'])
+            ->assertSessionHasErrors('email');
+        $this->assertGuest();
+
+        $this->post(route('login.entrar'), ['email' => 'ana@granja.com', 'password' => 'nueva-clave-1'])
+            ->assertRedirect(route('home'));
+        $this->assertAuthenticatedAs($this->encargado->fresh());
     }
 
     public function test_el_admin_puede_cambiar_el_rol_de_otra_persona(): void

@@ -258,6 +258,24 @@ class MovimientoTest extends TestCase
         ])->assertRedirect(route('productos.index'));
     }
 
+    public function test_volver_solo_acepta_claves_de_la_lista_y_nunca_una_url_externa(): void
+    {
+        $this->actingAs($this->encargado);
+
+        foreach (['https://sitio-malicioso.com', '//sitio-malicioso.com', 'productos.index', 'home'] as $volver) {
+            // Al guardar, un valor desconocido se ignora y vuelve al historial
+            $this->post(route('movimientos.store'), [
+                'tipo' => 'entrada', 'producto_id' => $this->maiz->id, 'cantidad' => '1', 'volver' => $volver,
+            ])->assertRedirect(route('movimientos.index'));
+
+            // Y la hoja no lo usa para el enlace de cerrar ni lo reenvía en el formulario
+            $this->get(route('movimientos.create', ['volver' => $volver]))
+                ->assertOk()
+                ->assertDontSee('sitio-malicioso.com')
+                ->assertDontSee('name="volver"', false);
+        }
+    }
+
     public function test_el_historial_va_del_mas_reciente_al_mas_antiguo_y_se_pagina(): void
     {
         foreach (range(1, 21) as $numero) {
