@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -56,14 +57,17 @@ class MovimientoInventario extends Model
      *
      * Si el producto está inactivo, la cantidad no es mayor que 0 o una salida supera el
      * stock (RN-01), lanza ValidationException: el formulario muestra el error junto al campo.
+     *
+     * $fecha es cuándo ocurrió (por defecto, ahora). Solo el seeder la usa, para crear un
+     * historial de días pasados; la app siempre registra con la hora actual.
      */
-    public static function registrar(Producto $producto, string $tipo, string|int|float $cantidad, User $usuario): self
+    public static function registrar(Producto $producto, string $tipo, string|int|float $cantidad, User $usuario, ?Carbon $fecha = null): self
     {
         if (! in_array($tipo, ['entrada', 'salida'], true)) {
             throw new InvalidArgumentException("Tipo de movimiento desconocido: {$tipo}");
         }
 
-        return DB::transaction(function () use ($producto, $tipo, $cantidad, $usuario) {
+        return DB::transaction(function () use ($producto, $tipo, $cantidad, $usuario, $fecha) {
             // Se vuelve a leer el producto, ahora con su fila bloqueada hasta el final de la transacción
             $producto = Producto::lockForUpdate()->findOrFail($producto->id);
 
@@ -98,7 +102,7 @@ class MovimientoInventario extends Model
                 'usuario_id' => $usuario->id,
                 'tipo' => $tipo,
                 'cantidad' => $cantidad,
-                'fecha' => now(),
+                'fecha' => $fecha ?? now(),
             ]);
         });
     }

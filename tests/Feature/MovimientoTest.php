@@ -8,6 +8,7 @@ use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LogicException;
 use RuntimeException;
@@ -195,6 +196,25 @@ class MovimientoTest extends TestCase
 
         $this->assertSame('100.00', $this->stock());
         $this->assertSame(1, MovimientoInventario::count());
+    }
+
+    public function test_rn04_en_mysql_la_fila_del_producto_se_bloquea_con_for_update(): void
+    {
+        // SQLite (la base normal de las pruebas) ignora lockForUpdate. Para verificarlo en MySQL:
+        // ver "Pruebas contra MySQL" en el README (base inventario_avicola_test).
+        if (DB::getDriverName() !== 'mysql') {
+            $this->markTestSkipped('Solo con MySQL: SQLite ignora lockForUpdate.');
+        }
+
+        $consultas = [];
+        DB::listen(function ($consulta) use (&$consultas) {
+            $consultas[] = strtolower($consulta->sql);
+        });
+
+        MovimientoInventario::registrar($this->maiz, 'salida', 1, $this->admin);
+
+        $bloqueo = array_filter($consultas, fn ($sql) => str_contains($sql, 'from `productos`') && str_contains($sql, 'for update'));
+        $this->assertCount(1, $bloqueo, "No se encontró el SELECT ... FOR UPDATE:\n".implode("\n", $consultas));
     }
 
     public function test_rn04_el_stock_siempre_es_la_suma_del_historial(): void
