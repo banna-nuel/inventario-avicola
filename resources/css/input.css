@@ -127,13 +127,9 @@
  * los elementos que tienen el mismo view-transition-name en las dos. Por eso el círculo
  * negro de la barra (nav-activo) se desliza hasta el ítem de la página destino.
  * Firefox y los navegadores sin soporte ignoran estas reglas y navegan normal.
- * Con "reducir movimiento" activado en el sistema, la transición ni siquiera se activa.
+ * La regla que ACTIVA la transición (@view-transition) está inline en
+ * resources/views/layouts/partes/head.blade.php (ahí se explica por qué).
  */
-@media (prefers-reduced-motion: no-preference) {
-    @view-transition {
-        navigation: auto;
-    }
-}
 
 .vt-encabezado {
     view-transition-name: encabezado;
@@ -163,6 +159,79 @@
 
 .vt-icono-buscar {
     view-transition-name: nav-icono-buscar;
+}
+
+/* Hoja de formulario (components/hoja.blade.php) y su velo oscuro */
+.vt-hoja {
+    view-transition-name: hoja;
+}
+
+.vt-velo {
+    view-transition-name: velo;
+}
+
+@keyframes hoja-subir {
+    from {
+        transform: translateY(100%);
+    }
+}
+
+@keyframes hoja-bajar {
+    to {
+        transform: translateY(100%);
+    }
+}
+
+@keyframes hoja-aparecer {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+}
+
+@keyframes hoja-desaparecer {
+    to {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+}
+
+/* Durante la transición, las capas se apilan en el mismo orden que en la página:
+   velo (abajo) < hoja < barra flotante y sus íconos (arriba). Sin esto, la hoja tapa la barra. */
+::view-transition-group(velo) {
+    z-index: 1;
+}
+
+::view-transition-group(hoja) {
+    z-index: 2;
+}
+
+::view-transition-group(barra),
+::view-transition-group(nav-activo),
+::view-transition-group(nav-icono-inicio),
+::view-transition-group(nav-icono-dashboard),
+::view-transition-group(nav-icono-buscar) {
+    z-index: 3;
+}
+
+/* :only-child = la hoja existe solo en una de las dos páginas (se abre o se cierra) */
+::view-transition-new(hoja):only-child {
+    animation: hoja-subir 320ms var(--ease-asentar) both;
+}
+
+::view-transition-old(hoja):only-child {
+    animation: hoja-bajar 220ms var(--ease-asentar) both;
+}
+
+/* En escritorio la hoja es un modal centrado: aparece con un leve zoom en vez de subir */
+@media (min-width: 40rem) {
+    ::view-transition-new(hoja):only-child {
+        animation-name: hoja-aparecer;
+    }
+
+    ::view-transition-old(hoja):only-child {
+        animation-name: hoja-desaparecer;
+    }
 }
 
 /* Lo que cambia de lugar viaja en ~320 ms con la curva "asentar" del Figma */

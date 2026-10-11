@@ -4,6 +4,12 @@
 document.addEventListener('submit', function (evento) {
     const formulario = evento.target;
 
+    // Formularios peligrosos (eliminar) piden confirmación: <form data-confirmar="¿Eliminar…?">
+    if (formulario.dataset.confirmar && !window.confirm(formulario.dataset.confirmar)) {
+        evento.preventDefault();
+        return;
+    }
+
     if (formulario.dataset.enviando === 'si') {
         evento.preventDefault();
         return;
@@ -42,7 +48,39 @@ window.addEventListener('pageshow', function (evento) {
     });
 });
 
-// 2) Cerrar mensajes flash con el botón ×
+// 2) Campo grande de las hojas (components/campo-titulo.blade.php):
+//    la letra se achica cuando el nombre es largo, como en el Figma (hasta 14 letras: 40 px, etc.)
+const TAMANOS_TITULO = [[14, 40], [22, 32], [34, 26]];
+
+function ajustarCampoTitulo(campo) {
+    const largo = campo.value.length;
+    const regla = TAMANOS_TITULO.find(function (par) { return largo <= par[0]; });
+    campo.style.fontSize = (regla ? regla[1] : 22) + 'px';
+}
+
+document.querySelectorAll('[data-campo-titulo]').forEach(ajustarCampoTitulo);
+
+document.addEventListener('input', function (evento) {
+    if (evento.target.matches('[data-campo-titulo]')) {
+        ajustarCampoTitulo(evento.target);
+    }
+});
+
+document.addEventListener('keydown', function (evento) {
+    // Enter en el campo grande guarda (no salta de línea)
+    if (evento.key === 'Enter' && evento.target.matches('[data-campo-titulo]')) {
+        evento.preventDefault();
+        evento.target.form.requestSubmit();
+    }
+
+    // Esc cierra la hoja abierta
+    const hoja = document.querySelector('[data-hoja]');
+    if (evento.key === 'Escape' && hoja) {
+        window.location.href = hoja.dataset.cerrar;
+    }
+});
+
+// 3) Cerrar mensajes flash con el botón ×
 document.addEventListener('click', function (evento) {
     const cerrar = evento.target.closest('[data-cerrar-alerta]');
     if (cerrar) {

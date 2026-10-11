@@ -21,6 +21,8 @@
     $tamanos = [
         'normal' => 'px-6 py-[18px] text-base leading-[1.2]',
         'chico' => 'min-h-10 px-4 py-2 text-sm',
+        // Botón circular de 41 px solo con ícono (el "+" de Collections en el Figma); requiere aria-label
+        'icono' => 'size-[41px] shrink-0',
     ];
 
     $variantes = [

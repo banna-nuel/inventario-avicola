@@ -5,7 +5,8 @@
     @include('layouts.partes.head')
 </head>
 
-<body class="min-h-dvh">
+{{-- Con una hoja abierta, el fondo no hace scroll --}}
+<body class="min-h-dvh @hasSection('hoja') overflow-hidden @endif">
     <a href="#contenido"
         class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-tinta focus:px-4 focus:py-2 focus:text-superficie">
         Saltar al contenido
@@ -15,7 +16,7 @@
         Encabezado (TopBar del Figma): zona segura de 56 px arriba y una barra de 64 px
         con el logotipo a 16 px. A los lados: volver (opcional) y cerrar sesión.
     --}}
-    <header class="vt-encabezado w-full px-5 pt-[max(env(safe-area-inset-top),56px)]">
+    <header class="vt-encabezado w-full px-5 pt-[max(env(safe-area-inset-top),56px)]" @hasSection('hoja') inert @endif>
         <div class="flex h-16 items-start justify-between pt-4">
             <div class="-mt-1.5 size-10">
                 @hasSection('volver')
@@ -39,7 +40,8 @@
     </header>
 
     {{-- Contenido a todo el ancho con márgenes de 20 px, como en el Figma; 128 px abajo para no quedar bajo la barra --}}
-    <main id="contenido" class="vt-contenido w-full px-5 pb-32">
+    {{-- Con una hoja abierta, lo de atrás queda inerte (sin foco ni clics) --}}
+    <main id="contenido" class="vt-contenido w-full px-5 pb-32" @hasSection('hoja') inert @endif>
         {{-- Mensajes flash: los controladores usan ->with('success', ...) o ->with('error', ...) --}}
         @if (session('success'))
             <x-alerta tipo="exito" class="mt-2">{{ session('success') }}</x-alerta>
@@ -50,6 +52,9 @@
 
         @yield('content')
     </main>
+
+    {{-- Hoja de formulario (crear/editar), encima del listado: ver components/hoja.blade.php --}}
+    @yield('hoja')
 
     {{-- Navegación flotante tipo píldora (BottomNav del Figma) --}}
     @php

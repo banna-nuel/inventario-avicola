@@ -92,6 +92,16 @@ class InterfazTest extends TestCase
         }
     }
 
+    public function test_la_regla_que_activa_las_transiciones_va_inline_en_ambos_layouts(): void
+    {
+        // Inline (no en app.css) para que el navegador la vea antes de cargar los estilos
+        $this->get('/login')->assertSee('@view-transition { navigation: auto; }', false);
+
+        $this->actingAs(User::factory()->create())->get('/home')
+            ->assertSee('@view-transition { navigation: auto; }', false)
+            ->assertSee('@view-transition { navigation: none; }', false);
+    }
+
     public function test_una_pagina_fuera_de_la_barra_no_tiene_circulo_activo(): void
     {
         $admin = User::factory()->admin()->create();

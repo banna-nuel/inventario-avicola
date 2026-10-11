@@ -28,6 +28,16 @@ class AutenticacionTest extends TestCase
         $this->assertAuthenticatedAs($usuario);
     }
 
+    public function test_los_mensajes_de_validacion_salen_en_espanol(): void
+    {
+        // Traducciones de laravel-lang (lang/es/validation.php)
+        $this->from('/login')->post('/login', ['email' => '', 'password' => ''])
+            ->assertSessionHasErrors([
+                'email' => 'El campo correo electrónico es obligatorio.',
+                'password' => 'El campo contraseña es obligatorio.',
+            ]);
+    }
+
     public function test_un_error_conserva_el_correo_pero_no_la_contrasena(): void
     {
         User::factory()->create(['email' => 'ana@test.com']);
