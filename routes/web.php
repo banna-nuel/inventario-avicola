@@ -8,6 +8,7 @@ use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProximamenteController;
+use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Route;
  * route('nombre'), nunca la URL escrita a mano. La matriz rol × ruta se prueba en
  * tests/Feature/RutasTest.php: si agregas o cambias una ruta, actualiza ese test.
  *
- * Las rutas de los módulos pendientes apuntan a ProximamenteController;
+ * Las rutas de los módulos pendientes (hoy solo reportes) apuntan a ProximamenteController;
  * cada fase las cambia por su controlador real.
  *
  * No existen a propósito (responden 404 o 405):
@@ -64,13 +65,13 @@ Route::middleware(['auth', 'activo'])->group(function () {
         Route::put('/productos/{producto}', [ProductoController::class, 'update'])->name('productos.update');
         Route::patch('/productos/{producto}/estado', [ProductoController::class, 'cambiarEstado'])->name('productos.cambiar-estado');
 
-        // Usuarios (Fase 7)
-        Route::get('/usuarios', [ProximamenteController::class, 'mostrar'])->name('usuarios.index');
-        Route::get('/usuarios/create', [ProximamenteController::class, 'mostrar'])->name('usuarios.create');
-        Route::post('/usuarios', [ProximamenteController::class, 'guardar'])->name('usuarios.store');
-        Route::get('/usuarios/{usuario}/edit', [ProximamenteController::class, 'mostrar'])->name('usuarios.edit');
-        Route::put('/usuarios/{usuario}', [ProximamenteController::class, 'guardar'])->name('usuarios.update');
-        Route::patch('/usuarios/{usuario}/estado', [ProximamenteController::class, 'guardar'])->name('usuarios.cambiar-estado');
+        // Usuarios: crear, editar y activar/desactivar (no hay destroy: RN-03)
+        Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
+        Route::get('/usuarios/create', [UsuarioController::class, 'create'])->name('usuarios.create');
+        Route::post('/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
+        Route::get('/usuarios/{usuario}/edit', [UsuarioController::class, 'edit'])->name('usuarios.edit');
+        Route::put('/usuarios/{usuario}', [UsuarioController::class, 'update'])->name('usuarios.update');
+        Route::patch('/usuarios/{usuario}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.cambiar-estado');
 
         // Reportes en pantalla (Fase 8)
         Route::get('/reportes', [ProximamenteController::class, 'mostrar'])->name('reportes.index');

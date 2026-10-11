@@ -50,6 +50,12 @@ class User extends Authenticatable
         ];
     }
 
+    // Roles posibles (columna users.rol) con su nombre para mostrar
+    public const ROLES = [
+        'admin' => 'Administrador',
+        'encargado' => 'Encargado de inventario',
+    ];
+
     // Atajo para las vistas y los permisos: auth()->user()->esAdmin()
     public function esAdmin(): bool
     {

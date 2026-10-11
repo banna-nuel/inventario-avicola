@@ -134,7 +134,7 @@ class BusquedaTest extends TestCase
             ->assertSee('Inactivo');
     }
 
-    public function test_ver_todos_de_categorias_filtra_el_listado(): void
+    public function test_ver_todos_de_categorias_y_usuarios_filtra_esos_listados(): void
     {
         $this->actingAs($this->admin);
 
@@ -142,5 +142,9 @@ class BusquedaTest extends TestCase
             ->assertSee('Granos')
             ->assertDontSee('Vacunas')
             ->assertSee('Categorías con «gran»');
+
+        $this->get(route('usuarios.index', ['q' => 'granja']))
+            ->assertSee('Ana Pérez')
+            ->assertDontSee('Laura Gómez');
     }
 }

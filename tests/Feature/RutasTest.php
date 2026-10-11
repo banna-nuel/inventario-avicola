@@ -152,17 +152,7 @@ class RutasTest extends TestCase
         }
     }
 
-    public function test_las_escrituras_de_modulos_pendientes_avisan_con_un_flash_de_error(): void
-    {
-        $this->actingAs($this->admin)
-            ->from(route('usuarios.index'))
-            ->post(route('usuarios.store'), ['name' => 'Ana'])
-            ->assertRedirect(route('usuarios.index'))
-            ->assertSessionHas('error', 'El módulo de Usuarios todavía no está disponible. No se guardó nada.');
-
-        $this->assertDatabaseMissing('users', ['name' => 'Ana']);
-    }
-
+    // Desde la Fase 7 no quedan escrituras pendientes: solo los GET de reportes (Fase 8)
     public function test_los_get_de_modulos_pendientes_muestran_proximamente(): void
     {
         $this->actingAs($this->admin)

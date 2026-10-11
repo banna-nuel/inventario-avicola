@@ -6,10 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 /**
- * Respuesta temporal para las rutas de los módulos que aún no se construyen.
- * Así ningún enlace lleva a un 404: los GET muestran "Próximamente" y las escrituras
- * vuelven atrás con un mensaje de error, sin guardar nada.
+ * Respuesta temporal para las rutas de los módulos que aún no se construyen (hoy: reportes).
+ * Así ningún enlace lleva a un 404: muestran la pantalla "Próximamente".
  * Cada fase cambia sus rutas en routes/web.php para que apunten a su controlador real.
+ * (Las escrituras pendientes respondían con un flash de error; desde la Fase 7 ya no queda ninguna.)
  */
 class ProximamenteController extends Controller
 {
@@ -18,13 +18,7 @@ class ProximamenteController extends Controller
         return view('proximamente', ['modulo' => $this->modulo($request)]);
     }
 
-    public function guardar(Request $request)
-    {
-        return back(fallback: route('home'))
-            ->with('error', "El módulo de {$this->modulo($request)} todavía no está disponible. No se guardó nada.");
-    }
-
-    // Nombre del módulo a partir del nombre de la ruta: "usuarios.create" → "Usuarios"
+    // Nombre del módulo a partir del nombre de la ruta: "reportes.stock-bajo" → "Reportes"
     private function modulo(Request $request): string
     {
         return Str::ucfirst(Str::before($request->route()->getName(), '.'));
