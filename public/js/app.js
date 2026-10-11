@@ -214,10 +214,20 @@ function actualizarResumen() {
     resumen.dataset.estado = estado;   // el color sale del CSS según data-estado
 }
 
+// "Registrar" queda deshabilitado hasta que se elija entrada o salida (ninguno viene marcado)
+function actualizarBotonMovimiento() {
+    const tipoElegido = formularioMovimiento.querySelector('[name="tipo"]:checked');
+    formularioMovimiento.querySelector('[type="submit"]').disabled = !tipoElegido;
+}
+
 if (formularioMovimiento) {
     formularioMovimiento.addEventListener('input', actualizarResumen);
-    formularioMovimiento.addEventListener('change', actualizarResumen);
+    formularioMovimiento.addEventListener('change', function () {
+        actualizarResumen();
+        actualizarBotonMovimiento();
+    });
     actualizarResumen();
+    actualizarBotonMovimiento();
 }
 
 // 6) Cerrar mensajes flash con el botón ×

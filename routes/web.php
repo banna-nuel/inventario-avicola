@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BusquedaController;
 use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProximamenteController;
@@ -12,8 +15,8 @@ use Illuminate\Support\Facades\Route;
  * route('nombre'), nunca la URL escrita a mano. La matriz rol × ruta se prueba en
  * tests/Feature/RutasTest.php: si agregas o cambias una ruta, actualiza ese test.
  *
- * Las rutas de los módulos pendientes apuntan a ProximamenteController; cada fase
- * las cambia por su controlador real.
+ * Las rutas de los módulos pendientes apuntan a ProximamenteController;
+ * cada fase las cambia por su controlador real.
  *
  * No existen a propósito (responden 404 o 405):
  * - show en ningún recurso
@@ -37,14 +40,15 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware(['auth', 'activo'])->group(function () {
 
     // ---- Administrador y encargado ----
-    Route::view('/home', 'home')->name('home');
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
-    Route::view('/search', 'search')->name('search');
+    // Controladores "invocables" (un solo método __invoke)
+    Route::get('/home', InicioController::class)->name('home');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/search', BusquedaController::class)->name('search');
 
     // Productos: el encargado solo ve el listado
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
 
-    // Movimientos: los dos roles registran entradas y salidas (inmutables: RN-09)
+    // Movimientos: los dos roles registran entradas y salidas y ven el historial con filtros (inmutables: RN-09)
     Route::get('/movimientos', [MovimientoController::class, 'index'])->name('movimientos.index');
     Route::get('/movimientos/create', [MovimientoController::class, 'create'])->name('movimientos.create');
     Route::post('/movimientos', [MovimientoController::class, 'store'])->name('movimientos.store');

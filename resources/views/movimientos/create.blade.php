@@ -5,13 +5,12 @@
 
 @section('hoja')
     @php
-        // Si llegó desde el listado de productos, al cerrar o guardar vuelve allá
-        $cerrar = $desdeProductos ? route('productos.index') : route('movimientos.index');
         $elegido = (string) old('producto_id', $productoElegido);
         $tipoElegido = old('tipo', $tipo);
         $productoActual = $productos->firstWhere('id', (int) $elegido);
     @endphp
 
+    {{-- $cerrar: vuelve al historial (con sus filtros), a productos o al dashboard, según de dónde llegó --}}
     <x-hoja titulo="Nuevo movimiento" :cerrar="$cerrar">
         @if ($productos->isEmpty())
             <x-estado-vacio titulo="No hay productos activos" class="mt-10"
@@ -21,15 +20,15 @@
                 @endif
             </x-estado-vacio>
         @else
-            {{-- data-movimiento: public/js/app.js muestra cómo queda el stock antes de guardar --}}
-            <form action="{{ route('movimientos.store') }}" method="POST" class="flex flex-1 flex-col" novalidate data-movimiento>
+            {{-- data-movimiento: public/js/app.js muestra cómo queda el stock y habilita el botón al elegir el tipo --}}
+            <form action="{{ route('movimientos.store') }}" method="POST" class="group flex flex-1 flex-col" novalidate data-movimiento>
                 @csrf
-                @if ($desdeProductos)
-                    <input type="hidden" name="desde" value="productos">
+                @if ($volver)
+                    <input type="hidden" name="volver" value="{{ $volver }}">
                 @endif
 
                 <div class="flex flex-1 flex-col justify-center gap-7 pt-6 sm:px-5">
-                    {{-- Tipo: dos radios nativos con aspecto de interruptor --}}
+                    {{-- Tipo: dos radios nativos con aspecto de interruptor. Ninguno viene marcado a propósito. --}}
                     <fieldset class="flex flex-col items-center gap-2">
                         <legend class="sr-only">Tipo de movimiento</legend>
                         <div class="inline-flex rounded-full bg-superficie p-1 {{ $errors->has('tipo') ? 'ring-1 ring-peligro' : '' }}">
@@ -96,8 +95,12 @@
                     </p>
                 </div>
 
-                <div class="flex justify-center pt-8">
-                    <x-boton cargando="Registrando…">Registrar</x-boton>
+                {{-- Deshabilitado hasta elegir entrada o salida (el JS lo habilita al marcar el tipo) --}}
+                <div class="flex flex-col items-center gap-3 pt-8">
+                    <x-boton cargando="Registrando…" :disabled="! $tipoElegido">Registrar</x-boton>
+                    <p class="font-mono text-xs text-tenue group-has-[input[name=tipo]:checked]:hidden">
+                        Elige entrada o salida para registrar.
+                    </p>
                 </div>
             </form>
         @endif

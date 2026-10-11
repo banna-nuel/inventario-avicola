@@ -56,9 +56,12 @@ class ProductoController extends Controller
 
     public function edit(Request $request, Producto $producto)
     {
+        $movimientos = $producto->movimientos()->count();
+
         return view('productos.edit', $this->listado($request) + [
             'producto' => $producto,
-            'tieneMovimientos' => $producto->movimientos()->exists(),
+            'movimientos' => $movimientos,
+            'tieneMovimientos' => $movimientos > 0,
         ]);
     }
 
@@ -94,7 +97,10 @@ class ProductoController extends Controller
         $estado = is_string($estado) && isset(self::ESTADOS[$estado]) ? $estado : '';
 
         $productos = Producto::with('categoria')   // with(): la categoría de todos en 1 consulta (sin N+1)
-            ->when($q !== '', fn ($consulta) => $consulta->where('nombre', 'like', "%{$q}%"))
+            // Por nombre del producto o de su categoría (whereContiene: AppServiceProvider)
+            ->when($q !== '', fn ($consulta) => $consulta->where(fn ($donde) => $donde
+                ->whereContiene('nombre', $q)
+                ->orWhereHas('categoria', fn ($categoria) => $categoria->whereContiene('nombre', $q))))
             ->when($categoria, fn ($consulta) => $consulta->where('categoria_id', $categoria))
             ->when($estado === '', fn ($consulta) => $consulta->where('activo', true))
             ->when($estado === 'stock-bajo', fn ($consulta) => $consulta->where('activo', true)->stockBajo())

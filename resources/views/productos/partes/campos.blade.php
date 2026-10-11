@@ -9,11 +9,14 @@
 
     <div class="grid items-start gap-5 sm:grid-cols-2">
         @if ($tieneMovimientos ?? false)
-            {{-- RN-08: con movimientos, la unidad queda fija (el historial está en esa unidad) --}}
+            {{--
+                RN-08: con movimientos, la unidad queda fija (el historial está en esa unidad).
+                No se envía en el formulario y el servidor también lo valida (ProductoRequest).
+            --}}
             <div class="flex flex-col gap-2">
                 <p class="font-mono text-xs text-tenue">Unidad de medida</p>
                 <p class="rounded-campo border border-borde px-4 py-3 font-mono text-base sm:text-sm">{{ ucfirst($producto->unidad_medida->value) }}</p>
-                <p class="font-mono text-xs text-tenue">No se cambia: ya tiene movimientos.</p>
+                <p class="font-mono text-xs text-tenue">Unidad fija: el producto ya tiene movimientos</p>
             </div>
         @else
             <x-select name="unidad_medida" etiqueta="Unidad de medida" :opciones="UnidadMedida::opciones()"

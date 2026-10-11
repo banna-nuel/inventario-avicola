@@ -24,7 +24,7 @@
             <input type="hidden" name="estado" value="{{ $estado }}">
         @endif
 
-        <x-buscador :valor="$q" etiqueta="Buscar productos por nombre" placeholder="Buscar producto" class="flex-1" />
+        <x-buscador :valor="$q" etiqueta="Buscar productos por nombre o categoría" placeholder="Buscar producto o categoría" class="flex-1" />
 
         {{-- Al cambiar la categoría se filtra solo (data-enviar-al-cambiar, public/js/app.js) --}}
         <div class="sm:w-60">
@@ -73,7 +73,9 @@
                 @endphp
                 <tr>
                     <td class="w-full">
-                        <span class="block font-display text-base [overflow-wrap:anywhere] {{ $producto->activo ? '' : 'text-tenue' }}">{{ $producto->nombre }}</span>
+                        {{-- El nombre lleva al historial de movimientos de ese producto --}}
+                        <a href="{{ route('movimientos.index', ['producto' => $producto->id]) }}" title="Ver historial"
+                            class="block font-display text-base underline-offset-4 [overflow-wrap:anywhere] hover:underline {{ $producto->activo ? '' : 'text-tenue' }}">{{ $producto->nombre }}</a>
                         <span class="block font-mono text-micro font-medium text-tenue md:hidden">
                             {{ $producto->categoria->nombre }}<span class="sm:hidden"> · mín. {{ $minimo }}</span>
                         </span>
@@ -98,7 +100,7 @@
                         <div class="flex justify-end">
                             {{-- Registrar entrada o salida de este producto (los dos roles; solo si está activo) --}}
                             @if ($producto->activo)
-                                <a href="{{ route('movimientos.create', ['producto_id' => $producto->id, 'desde' => 'productos']) }}"
+                                <a href="{{ route('movimientos.create', ['producto_id' => $producto->id, 'volver' => 'productos']) }}"
                                     aria-label="Registrar movimiento de {{ $producto->nombre }}" title="Registrar movimiento"
                                     class="flex size-10 items-center justify-center rounded-full transition hover:bg-fondo">
                                     <x-icono nombre="movimientos" class="size-[18px]" />

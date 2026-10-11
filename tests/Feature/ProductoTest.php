@@ -345,7 +345,7 @@ class ProductoTest extends TestCase
         $this->actingAs($this->admin);
 
         $this->get(route('productos.edit', $conHistorial))
-            ->assertSee('No se cambia: ya tiene movimientos.')
+            ->assertSee('Unidad fija: el producto ya tiene movimientos')
             ->assertDontSee('name="unidad_medida"', false);
 
         $this->put(route('productos.update', $conHistorial), $this->datosValidos(['nombre' => 'Maíz', 'unidad_medida' => 'libras']))

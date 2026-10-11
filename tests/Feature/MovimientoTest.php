@@ -130,10 +130,26 @@ class MovimientoTest extends TestCase
     {
         Producto::factory()->inactivo()->create(['nombre' => 'Sorgo descontinuado']);
 
-        $this->actingAs($this->encargado)->get(route('movimientos.create'))
-            ->assertOk()
-            ->assertSee('Maíz amarillo')
-            ->assertDontSee('Sorgo descontinuado');
+        $html = $this->actingAs($this->encargado)->get(route('movimientos.create'))->assertOk()->getContent();
+
+        // Solo el select de la hoja (el filtro del historial, detrás, sí lista los inactivos)
+        preg_match('/<select\s+id="producto_id".*?<\/select>/s', $html, $select);
+        $this->assertStringContainsString('Maíz amarillo', $select[0]);
+        $this->assertStringNotContainsString('Sorgo descontinuado', $select[0]);
+    }
+
+    public function test_registrar_esta_deshabilitado_hasta_elegir_el_tipo(): void
+    {
+        // disabled="disabled" (ojo: las clases de Tailwind también contienen "disabled:")
+        $botonDeshabilitado = '/<button[^>]*\sdisabled="disabled"[^>]*>\s*Registrar\s*</';
+
+        $sinTipo = $this->actingAs($this->encargado)->get(route('movimientos.create'))->getContent();
+        $this->assertMatchesRegularExpression($botonDeshabilitado, $sinTipo);
+        $this->assertStringContainsString('Elige entrada o salida para registrar.', $sinTipo);
+
+        // Con el tipo ya elegido (por ejemplo desde el dashboard) el botón está habilitado
+        $conTipo = $this->get(route('movimientos.create', ['tipo' => 'entrada']))->getContent();
+        $this->assertDoesNotMatchRegularExpression($botonDeshabilitado, $conTipo);
     }
 
     // ---- Validaciones ----
@@ -224,21 +240,21 @@ class MovimientoTest extends TestCase
     {
         $this->actingAs($this->encargado)
             ->get(route('productos.index'))
-            ->assertSee(e(route('movimientos.create', ['producto_id' => $this->maiz->id, 'desde' => 'productos'])), false);
+            ->assertSee(e(route('movimientos.create', ['producto_id' => $this->maiz->id, 'volver' => 'productos'])), false);
 
-        $html = $this->get(route('movimientos.create', ['producto_id' => $this->maiz->id, 'desde' => 'productos', 'tipo' => 'salida']))
+        $html = $this->get(route('movimientos.create', ['producto_id' => $this->maiz->id, 'volver' => 'productos', 'tipo' => 'salida']))
             ->assertOk()
             ->assertSee('role="dialog"', false)
             ->assertSee('<option value="'.$this->maiz->id.'" selected', false)
             ->assertSee('Stock actual: 100 kilogramos')
-            ->assertSee('name="desde" value="productos"', false)
+            ->assertSee('name="volver" value="productos"', false)
             ->getContent();
 
         $this->assertMatchesRegularExpression('/value="salida"[^>]*\schecked/', $html);
         $this->assertDoesNotMatchRegularExpression('/value="entrada"[^>]*\schecked/', $html);
 
         $this->post(route('movimientos.store'), [
-            'tipo' => 'salida', 'producto_id' => $this->maiz->id, 'cantidad' => '5', 'desde' => 'productos',
+            'tipo' => 'salida', 'producto_id' => $this->maiz->id, 'cantidad' => '5', 'volver' => 'productos',
         ])->assertRedirect(route('productos.index'));
     }
 

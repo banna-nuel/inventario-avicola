@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CategoriaRequest;
 use App\Models\Categoria;
+use Illuminate\Http\Request;
 
 /**
  * CRUD de categorías (solo administrador, ver routes/web.php).
@@ -12,9 +13,12 @@ use App\Models\Categoria;
  */
 class CategoriaController extends Controller
 {
-    public function index()
+    // ?q= llega desde "Ver todos" en Search: filtra por nombre
+    public function index(Request $request)
     {
-        return view('categorias.index', ['categorias' => $this->listado()]);
+        $q = is_string($request->query('q')) ? trim($request->query('q')) : '';
+
+        return view('categorias.index', ['categorias' => $this->listado($q), 'q' => $q]);
     }
 
     public function create()
@@ -64,8 +68,11 @@ class CategoriaController extends Controller
     }
 
     // Categorías en orden alfabético con su número de productos (una sola consulta, sin N+1)
-    private function listado()
+    private function listado(string $q = '')
     {
-        return Categoria::withCount('productos')->orderBy('nombre')->get();
+        return Categoria::withCount('productos')
+            ->when($q !== '', fn ($consulta) => $consulta->whereContiene('nombre', $q))
+            ->orderBy('nombre')
+            ->get();
     }
 }

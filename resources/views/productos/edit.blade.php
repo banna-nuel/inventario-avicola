@@ -16,7 +16,8 @@
                 {{-- El stock no se edita aquí: solo cambia con entradas y salidas (RN-04) --}}
                 <p class="text-center font-mono text-xs text-tenue">
                     Stock actual: <span class="text-tinta">{{ $producto->unidad_medida->cantidad($producto->stock_actual) }}</span>
-                    · cambia solo con movimientos
+                    · cambia solo con movimientos ·
+                    <a href="{{ route('movimientos.index', ['producto' => $producto->id]) }}" class="text-tinta underline underline-offset-4">Ver historial ({{ $movimientos }})</a>
                 </p>
 
                 @include('productos.partes.campos')

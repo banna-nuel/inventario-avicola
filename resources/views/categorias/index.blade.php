@@ -11,6 +11,14 @@
         </x-boton>
     </x-encabezado>
 
+    {{-- Filtro por nombre que llega desde "Ver todos" en Search ($q no existe en las hojas) --}}
+    @if (($q ?? '') !== '')
+        <p class="pb-4 text-center font-mono text-xs text-tenue">
+            Categorías con «{{ $q }}» ·
+            <a href="{{ route('categorias.index') }}" class="text-tinta underline underline-offset-4">Ver todas</a>
+        </p>
+    @endif
+
     @if ($categorias->isEmpty())
         <x-estado-vacio titulo="Aún no hay categorías"
             mensaje="Crea la primera para organizar los productos, por ejemplo: Alimento, Medicamentos o Vacunas.">

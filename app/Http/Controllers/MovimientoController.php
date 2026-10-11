@@ -2,36 +2,40 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\FiltrosHistorialRequest;
 use App\Http\Requests\MovimientoRequest;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
-use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 /**
- * Movimientos de inventario (CU-04, CU-05). Los dos roles registran entradas y salidas.
- * Los movimientos son inmutables (RN-09): no hay editar ni eliminar.
+ * Movimientos de inventario (CU-04, CU-05, CU-06). Los dos roles registran entradas y salidas
+ * y consultan el historial con filtros. Los movimientos son inmutables (RN-09).
  * El formulario es una hoja encima del historial, como en categorías y productos.
- * Los filtros del historial llegan en la Fase 6.
  */
 class MovimientoController extends Controller
 {
-    public function index()
+    // A dónde vuelve la hoja si se abrió desde otra pantalla (?volver=productos)
+    private const VOLVER = ['productos' => 'productos.index', 'dashboard' => 'dashboard'];
+
+    public function index(FiltrosHistorialRequest $request)
     {
-        return view('movimientos.index', ['movimientos' => $this->historial()]);
+        return view('movimientos.index', $this->historial($request));
     }
 
-    public function create(Request $request)
+    public function create(FiltrosHistorialRequest $request)
     {
-        $tipo = $request->query('tipo');
+        $historial = $this->historial($request);
+        $volver = $this->volver($request->query('volver'));
 
-        return view('movimientos.create', [
-            'movimientos' => $this->historial(),
+        return view('movimientos.create', $historial + [
             // Solo productos activos: los inactivos no admiten movimientos
             'productos' => Producto::with('categoria')->where('activo', true)->orderBy('nombre')->get(),
-            // Desde el listado de productos llega elegido (?producto_id=5&desde=productos)
-            'productoElegido' => $request->integer('producto_id') ?: null,
-            'tipo' => in_array($tipo, ['entrada', 'salida'], true) ? $tipo : null,
-            'desdeProductos' => $request->query('desde') === 'productos',
+            // Producto elegido: el del enlace (?producto_id=5) o, si no, el del filtro del historial
+            'productoElegido' => $request->integer('producto_id') ?: ($historial['filtros']['producto'] ?? null),
+            'tipo' => $historial['filtros']['tipo'] ?? null,
+            'volver' => $volver,
+            'cerrar' => $volver ? route(self::VOLVER[$volver]) : route('movimientos.index', $historial['filtros']),
         ]);
     }
 
@@ -45,9 +49,9 @@ class MovimientoController extends Controller
         $producto->refresh();
 
         $unidad = $producto->unidad_medida;
-        $destino = $request->input('desde') === 'productos' ? route('productos.index') : route('movimientos.index');
+        $volver = $this->volver($request->input('volver'));
 
-        $respuesta = redirect($destino)->with('success',
+        $respuesta = redirect()->route($volver ? self::VOLVER[$volver] : 'movimientos.index')->with('success',
             ucfirst($movimiento->tipo)." de {$unidad->cantidad($movimiento->cantidad)} de «{$producto->nombre}» registrada. "
             ."Stock: {$unidad->cantidad($producto->stock_actual)}."
         );
@@ -63,12 +67,33 @@ class MovimientoController extends Controller
         return $respuesta;
     }
 
-    // Historial del más reciente al más antiguo, con producto y usuario en 2 consultas (sin N+1)
-    private function historial()
+    // Historial filtrado, del más reciente al más antiguo
+    private function historial(FiltrosHistorialRequest $request): array
     {
-        return MovimientoInventario::with(['producto', 'usuario'])
+        $filtros = $request->filtros();
+
+        $movimientos = MovimientoInventario::with(['producto', 'usuario'])   // sin N+1
+            ->when($filtros['producto'] ?? null, fn ($consulta, $id) => $consulta->where('producto_id', $id))
+            ->when($filtros['tipo'] ?? null, fn ($consulta, $tipo) => $consulta->where('tipo', $tipo))
+            // Fechas inclusivas, en la zona de la app (America/Bogota): desde las 00:00 de "desde"
+            // hasta antes de las 00:00 del día siguiente a "hasta"
+            ->when($filtros['desde'] ?? null, fn ($consulta, $desde) => $consulta->where('fecha', '>=', Carbon::parse($desde)->startOfDay()))
+            ->when($filtros['hasta'] ?? null, fn ($consulta, $hasta) => $consulta->where('fecha', '<', Carbon::parse($hasta)->addDay()->startOfDay()))
             ->latest('fecha')
             ->latest('id')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();   // la paginación conserva los filtros
+
+        return [
+            'movimientos' => $movimientos,
+            'filtros' => $filtros,
+            // Para el select del filtro: todos los productos, también los inactivos (tienen historial)
+            'productosFiltro' => Producto::orderBy('nombre')->pluck('nombre', 'id'),
+        ];
+    }
+
+    private function volver(mixed $valor): ?string
+    {
+        return is_string($valor) && isset(self::VOLVER[$valor]) ? $valor : null;
     }
 }
