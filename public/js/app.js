@@ -26,7 +26,14 @@ document.addEventListener('submit', function (evento) {
 
     if (boton.dataset.textoCargando) {
         boton.dataset.textoOriginal = boton.innerHTML;
-        boton.innerHTML = '<span class="spinner" aria-hidden="true"></span><span>' + boton.dataset.textoCargando + '</span>';
+
+        // Spinner + texto creados como elementos (textContent, no HTML): el texto nunca se interpreta como código
+        const spinner = document.createElement('span');
+        spinner.className = 'spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+        const texto = document.createElement('span');
+        texto.textContent = boton.dataset.textoCargando;
+        boton.replaceChildren(spinner, texto);
     }
 });
 

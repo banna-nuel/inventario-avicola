@@ -29,10 +29,12 @@ class AuthController extends Controller
         // El bloqueo es por correo + IP: equivocarse con una cuenta no bloquea a las demás
         $clave = Str::transliterate(Str::lower($credenciales['email']).'|'.$request->ip());
 
+        // Los errores vuelven siempre a la ruta del login (no a "la página anterior", que sale
+        // del encabezado Referer y podría apuntar a otro sitio)
         if (RateLimiter::tooManyAttempts($clave, self::MAX_INTENTOS)) {
             $segundos = RateLimiter::availableIn($clave);
 
-            return back()
+            return redirect()->route('login')
                 ->withErrors(['email' => __('auth.throttle', ['seconds' => $segundos])])
                 ->onlyInput('email');
         }
@@ -41,7 +43,7 @@ class AuthController extends Controller
         if (! Auth::validate($credenciales)) {
             RateLimiter::hit($clave, self::SEGUNDOS_BLOQUEO);
 
-            return back()
+            return redirect()->route('login')
                 ->withErrors(['email' => __('auth.failed')])
                 ->onlyInput('email');
         }
@@ -49,7 +51,7 @@ class AuthController extends Controller
         $usuario = Auth::getLastAttempted();
 
         if (! $usuario->activo) {
-            return back()
+            return redirect()->route('login')
                 ->withErrors(['email' => 'Tu cuenta está desactivada. Habla con un administrador.'])
                 ->onlyInput('email');
         }
