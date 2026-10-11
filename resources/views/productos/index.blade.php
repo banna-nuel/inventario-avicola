@@ -24,7 +24,7 @@
             <input type="hidden" name="estado" value="{{ $estado }}">
         @endif
 
-        <x-buscador :valor="$q" etiqueta="Buscar productos por nombre o categoría" placeholder="Buscar producto o categoría" class="flex-1" />
+        <x-buscador :valor="$q" etiqueta="Buscar productos por nombre o categoría" placeholder="Buscar producto" class="flex-1" />
 
         {{-- Al cambiar la categoría se filtra solo (data-enviar-al-cambiar, public/js/app.js) --}}
         <div class="sm:w-60">
