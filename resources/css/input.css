@@ -250,6 +250,35 @@
 }
 
 /*
+ * Icosaedro 3D (components/icosaedro.blade.php y public/js/icosaedro.js).
+ * touch-action: pan-y → en táctil, arrastrar en horizontal lo gira y en vertical la página hace scroll.
+ */
+[data-icosaedro] {
+    position: relative;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+[data-icosaedro] line {
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+}
+
+[data-icosaedro] canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Con el 3D listo, el SVG estático se oculta (sigue ocupando su lugar: nada se mueve) */
+[data-icosaedro][data-webgl] svg {
+    visibility: hidden;
+}
+
+/*
  * Impresión (reportes): texto negro sobre blanco, sin sombras y sin partir filas entre páginas.
  * La barra flotante, los botones y los filtros llevan la clase print:hidden en sus vistas.
  */

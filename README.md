@@ -18,6 +18,7 @@ Hecho con **Laravel 12**, **Blade**, **Tailwind CSS v4 (CLI standalone, sin Node
 | Reportes (en pantalla, imprimibles) | Sí | No (403) |
 
 - **Inicio:** accesos a los módulos según el rol y un aviso de cuántos productos están en stock bajo.
+- **Icosaedro 3D** (RNF-08) en Inicio y en el login: gira solo, sigue al cursor y reacciona al scroll, al click y al arrastre táctil. Es decorativo y respeta "reducir movimiento".
 - **Dashboard:** productos activos, activos en stock bajo, movimientos de hoy (día calendario en hora de Bogotá) y la lista de alertas ordenada por mayor faltante, con acceso directo para registrar una entrada.
 - **Buscar:** mínimo 2 caracteres, resultados agrupados (10 por grupo) con "Ver todos".
 - **Historial:** filtros por producto, tipo y rango de fechas (inclusivo), paginado.
@@ -128,6 +129,26 @@ Con MySQL, la prueba `test_rn04_en_mysql_la_fila_del_producto_se_bloquea_con_for
 
 ---
 
+## Actualizar Three.js (archivo de vendor)
+
+Three.js no se instala con npm ni se carga desde un CDN: sus archivos están en `public/js/vendor/` y se sirven desde la propia app. Para pasar a otra versión:
+
+1. En https://github.com/mrdoob/three.js/releases elige una versión estable publicada **hace más de 2 semanas** (por ejemplo `r187`).
+2. Descarga los dos archivos de su carpeta `build/` (`three.module.js` importa a `three.core.js`, así que van juntos):
+
+   ```powershell
+   $v = 'r187'
+   Invoke-WebRequest "https://raw.githubusercontent.com/mrdoob/three.js/$v/build/three.module.js" -OutFile public/js/vendor/three.module.js
+   Invoke-WebRequest "https://raw.githubusercontent.com/mrdoob/three.js/$v/build/three.core.js" -OutFile public/js/vendor/three.core.js
+   Get-FileHash public/js/vendor/three.*.js -Algorithm SHA256
+   ```
+
+3. Actualiza `public/js/vendor/THIRD_PARTY.md`: versión, URLs, fecha, tamaño y SHA-256 de cada archivo (y la licencia, si cambió).
+4. Corre `php artisan test`: `IcosaedroTest` falla si los SHA-256 de `THIRD_PARTY.md` no coinciden con los archivos.
+5. Abre Inicio y el login y revisa que el icosaedro gire y que la consola del navegador no tenga errores.
+
+---
+
 ## Estructura del proyecto
 
 ```
@@ -145,6 +166,9 @@ resources/css/input.css            Tokens del diseño (@theme), transiciones y e
 resources/views/components/        Componentes Blade: boton, campo, select, hoja, tabla, badge, alerta...
 resources/views/{modulo}/          Vistas de cada módulo; create/edit son "hojas" sobre el listado
 public/js/app.js                   JavaScript vanilla (hoja accesible, filtros, resumen de stock, imprimir)
+public/js/icosaedro.js             Icosaedro 3D (módulo ES; carga Three.js solo cuando hace falta)
+public/js/vendor/                  Three.js autoalojado + THIRD_PARTY.md (versión, origen, SHA-256 y licencia)
+app/View/Components/Icosaedro.php  Componente x-icosaedro (calcula el SVG estático de respaldo)
 tests/Feature/                     Pruebas de cada fase
 docs/                              Requerimientos, casos de uso, modelo de datos y arquitectura
 ```
@@ -209,6 +233,7 @@ No existen a propósito (responden 404 o 405): ver un recurso (`show`), eliminar
 - **Búsqueda con LIKE escapado:** "50%" o "a_b" se buscan como texto, no como comodines.
 - **Transiciones entre páginas** con View Transitions de CSS, solo si la persona no pidió "reducir movimiento". En navegadores sin soporte (como Firefox) se navega normal.
 - **Reportes en pantalla e imprimibles:** sin exportar a PDF o Excel en la v1.
+- **Three.js autoalojado y cargado tarde:** sin CDN ni scripts externos o inline (permite una CSP estricta). Se descarga después de que la página cargó y solo si el icosaedro está a la vista; sin WebGL o con "reducir movimiento" queda un SVG estático.
 
 ---
 
@@ -219,7 +244,6 @@ No existen a propósito (responden 404 o 405): ver un recurso (`show`), eliminar
 - Exportar reportes a PDF o Excel.
 - Pedidos, entregas y pagos; notificaciones; varios almacenes.
 - Para un servidor en producción: HTTPS con cookies seguras (`SESSION_SECURE_COOKIE=true`) y cabeceras de seguridad (por ejemplo `X-Frame-Options`).
-- Fase 10 opcional: icosaedro 3D interactivo (solo con visto bueno).
 
 ---
 

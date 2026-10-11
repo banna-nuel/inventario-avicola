@@ -10,6 +10,8 @@
 
     {{-- Encabezado como "My Trove [87]" del Figma: título centrado con el número de accesos --}}
     <div class="flex flex-col items-center gap-3 pt-2.5 pb-6 text-center">
+        {{-- Icosaedro 3D decorativo (RNF-08), versión compacta --}}
+        <x-icosaedro tamano="compacto" class="mb-2" />
         <x-titulo-seccion nivel="h1" :titulo="'Hola, ' . Str::before($usuario->name, ' ')" :contador="count($accesos)" centrado />
         <p class="font-mono text-xs text-balance text-tenue">
             {{ ucfirst(now()->translatedFormat('l j \d\e F')) }} · {{ $usuario->esAdmin() ? 'Administrador' : 'Encargado de inventario' }}

@@ -71,7 +71,7 @@ Necesidades expresadas desde la perspectiva de cada actor, antes de bajarlas a c
 | RNF-05 | Contraseñas almacenadas con hash (bcrypt, vía Laravel por defecto). |
 | RNF-06 | Tiempo de carga de cualquier módulo ≤ 3 segundos. |
 | RNF-07 | Feedback visual (loading, confirmación, error) ante cualquier acción del usuario. |
-| RNF-08 | El dashboard incluye un elemento visual 3D interactivo (icosaedro wireframe) que reacciona a mouse, scroll y click — ver sección 8. No afecta el cumplimiento de RF-03; es un requisito de presentación, no de funcionalidad del sistema. |
+| RNF-08 | Inicio (versión compacta) y el login (versión grande) incluyen un elemento visual 3D interactivo (icosaedro alámbrico en gris oscuro sobre el fondo claro) que reacciona a mouse, scroll, click y arrastre táctil, con Three.js autoalojado (sin CDN) — ver sección 8. No va en el Dashboard. Es un requisito de presentación, no de funcionalidad del sistema. |
 
 ## 7. Restricciones Técnicas
 
@@ -94,13 +94,17 @@ Necesidades expresadas desde la perspectiva de cada actor, antes de bajarlas a c
 | Texto secundario | `#888888` – `#AAAAAA` (gris medio) |
 | Estados (alerta, éxito) | Se resuelven con intensidad/contraste (blanco brillante para alerta, gris tenue para neutral) en vez de color, manteniendo la paleta monocromática |
 
-**Elemento visual distintivo (RNF-08):** el sistema incluye un icosaedro wireframe 3D, renderizado en blanco sobre fondo negro (Three.js, cargado vía CDN), como pieza decorativa central en el dashboard. Comportamiento:
-- Rotación continua y lenta cuando no hay interacción.
-- Reacciona al movimiento del mouse sobre el componente (rotación sigue al cursor).
-- Reacciona al scroll de la página.
-- Reacciona al click (por ejemplo, un efecto de impulso o cambio de velocidad).
+> **Actualización (v1):** la paleta oscura de esta sección se descartó; el diseño final sigue el Figma (tema claro, monocromático, con un acento naranja mínimo). Ver el README del proyecto.
 
-Este elemento no reemplaza los indicadores de datos del dashboard — convive con ellos como refuerzo visual/de marca.
+**Elemento visual distintivo (RNF-08), actualizado:** icosaedro alámbrico 3D en gris oscuro (`#1C1C1C`) sobre el fondo claro (el blanco sobre negro quedó descartado junto con el tema oscuro). Va en **Inicio** (compacto, en el encabezado) y en el **login** (grande), con un solo componente reutilizable `x-icosaedro`; **no va en el Dashboard**. Three.js está **autoalojado** en `public/js/vendor` (versión, origen, SHA-256 y licencia en `THIRD_PARTY.md`), sin CDN ni scripts inline. Comportamiento:
+- Rotación continua y lenta cuando no hay interacción.
+- Con el puntero encima, la rotación sigue al cursor con suavizado.
+- El scroll de la página le da un impulso de rotación, sin bloquear el scroll.
+- El click da un impulso que se amortigua. En pantallas táctiles, arrastrar en horizontal lo gira.
+- Con "reducir movimiento" queda estático; sin WebGL se muestra un icosaedro estático en SVG.
+- Se pausa con la pestaña oculta o fuera de pantalla, y se carga después de la página (no afecta RNF-06).
+
+Es decorativo: no recibe foco y los lectores de pantalla lo ignoran.
 
 ## 9. Fuera de Alcance (fase inicial)
 

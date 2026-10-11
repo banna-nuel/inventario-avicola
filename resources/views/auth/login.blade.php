@@ -2,6 +2,9 @@
 @section('title', 'Iniciar sesión')
 @section('content')
     <div class="flex w-full max-w-sm flex-col gap-10">
+        {{-- Icosaedro 3D decorativo (RNF-08), versión grande --}}
+        <x-icosaedro tamano="grande" class="-mb-4" />
+
         <div class="flex flex-col items-center gap-4 text-center">
             <p class="font-mono text-xs text-tenue">Iniciar sesión</p>
             <h1 class="font-display text-titulo font-light text-balance">Inventario Avícola</h1>
