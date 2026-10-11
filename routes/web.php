@@ -7,7 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\ProductoController;
-use App\Http\Controllers\ProximamenteController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,9 +15,6 @@ use Illuminate\Support\Facades\Route;
  * Mapa de rutas de la v1. Toda ruta tiene nombre (recurso.accion) y en el código se usa
  * route('nombre'), nunca la URL escrita a mano. La matriz rol × ruta se prueba en
  * tests/Feature/RutasTest.php: si agregas o cambias una ruta, actualiza ese test.
- *
- * Las rutas de los módulos pendientes (hoy solo reportes) apuntan a ProximamenteController;
- * cada fase las cambia por su controlador real.
  *
  * No existen a propósito (responden 404 o 405):
  * - show en ningún recurso
@@ -73,10 +70,10 @@ Route::middleware(['auth', 'activo'])->group(function () {
         Route::put('/usuarios/{usuario}', [UsuarioController::class, 'update'])->name('usuarios.update');
         Route::patch('/usuarios/{usuario}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.cambiar-estado');
 
-        // Reportes en pantalla (Fase 8)
-        Route::get('/reportes', [ProximamenteController::class, 'mostrar'])->name('reportes.index');
-        Route::get('/reportes/stock-por-categoria', [ProximamenteController::class, 'mostrar'])->name('reportes.stock-por-categoria');
-        Route::get('/reportes/stock-bajo', [ProximamenteController::class, 'mostrar'])->name('reportes.stock-bajo');
-        Route::get('/reportes/mas-movidos', [ProximamenteController::class, 'mostrar'])->name('reportes.mas-movidos');
+        // Reportes en pantalla (se pueden imprimir; sin exportar en la v1)
+        Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
+        Route::get('/reportes/stock-por-categoria', [ReporteController::class, 'stockPorCategoria'])->name('reportes.stock-por-categoria');
+        Route::get('/reportes/stock-bajo', [ReporteController::class, 'stockBajo'])->name('reportes.stock-bajo');
+        Route::get('/reportes/mas-movidos', [ReporteController::class, 'masMovidos'])->name('reportes.mas-movidos');
     });
 });

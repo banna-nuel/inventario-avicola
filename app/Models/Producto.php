@@ -56,4 +56,20 @@ class Producto extends Model
     {
         return (float) $this->stock_actual < (float) $this->stock_minimo;
     }
+
+    // Productos en alerta: activos y en stock bajo, del mayor al menor faltante.
+    // La usan el Dashboard y el reporte de stock bajo: Producto::enAlerta()->get()
+    public function scopeEnAlerta(Builder $query): void
+    {
+        $query->where('activo', true)
+            ->stockBajo()
+            ->orderByRaw('stock_minimo - stock_actual desc')
+            ->orderBy('nombre');
+    }
+
+    // Cuánto le falta para llegar a su mínimo (0 si no está en stock bajo)
+    public function faltante(): float
+    {
+        return max(0, (float) $this->stock_minimo - (float) $this->stock_actual);
+    }
 }

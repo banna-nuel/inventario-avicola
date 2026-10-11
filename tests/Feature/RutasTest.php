@@ -152,16 +152,6 @@ class RutasTest extends TestCase
         }
     }
 
-    // Desde la Fase 7 no quedan escrituras pendientes: solo los GET de reportes (Fase 8)
-    public function test_los_get_de_modulos_pendientes_muestran_proximamente(): void
-    {
-        $this->actingAs($this->admin)
-            ->get(route('reportes.index'))
-            ->assertOk()
-            ->assertSee('Reportes')
-            ->assertSee('Próximamente');
-    }
-
     public function test_las_urls_que_no_deben_existir_responden_404_o_405(): void
     {
         $p = $this->producto->id;

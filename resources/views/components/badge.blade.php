@@ -17,7 +17,8 @@
     ];
 @endphp
 
-<span {{ $attributes->merge(['class' => 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs whitespace-nowrap '.$variantes[$variante]]) }}>
+{{-- print:border: el navegador no imprime fondos, así el badge se sigue viendo en papel --}}
+<span {{ $attributes->merge(['class' => 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs whitespace-nowrap print:border print:border-tinta '.$variantes[$variante]]) }}>
     @if ($variante === 'alerta')
         <x-icono nombre="alerta" class="size-3.5" />
     @endif

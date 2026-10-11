@@ -230,6 +230,14 @@ if (formularioMovimiento) {
     actualizarBotonMovimiento();
 }
 
+// Reportes: el botón "Imprimir" (data-imprimir) abre el diálogo de impresión del navegador.
+// Lo que sale en papel lo deciden los estilos @media print de resources/css/input.css.
+document.addEventListener('click', function (evento) {
+    if (evento.target.closest('[data-imprimir]')) {
+        window.print();
+    }
+});
+
 // 6) Cerrar mensajes flash con el botón ×
 document.addEventListener('click', function (evento) {
     const cerrar = evento.target.closest('[data-cerrar-alerta]');

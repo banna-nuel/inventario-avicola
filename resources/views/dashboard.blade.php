@@ -35,7 +35,7 @@
                 @foreach ($alertas as $producto)
                     @php
                         $unidad = $producto->unidad_medida;
-                        $faltan = (float) $producto->stock_minimo - (float) $producto->stock_actual;
+                        $faltan = $producto->faltante();
                     @endphp
                     <tr>
                         <td class="w-full">

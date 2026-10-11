@@ -21,7 +21,8 @@
     --}}
     <header class="vt-encabezado w-full px-5 pt-[max(env(safe-area-inset-top),56px)]" @hasSection('hoja') inert @endif>
         <div class="flex h-16 items-start justify-between pt-4">
-            <div class="-mt-1.5 size-10">
+            {{-- print:invisible: los controles no salen en la hoja impresa (reportes) --}}
+            <div class="-mt-1.5 size-10 print:invisible">
                 @hasSection('volver')
                     <a href="@yield('volver')" aria-label="Volver" title="Volver"
                         class="flex size-10 items-center justify-center rounded-full transition hover:bg-superficie">
@@ -32,7 +33,7 @@
 
             <a href="{{ route('home') }}" class="font-display text-xl leading-7 tracking-titulo whitespace-nowrap">Inventario Avícola</a>
 
-            <form action="{{ route('logout') }}" method="POST" class="-mt-1.5 size-10">
+            <form action="{{ route('logout') }}" method="POST" class="-mt-1.5 size-10 print:invisible">
                 @csrf
                 <button type="submit" aria-label="Cerrar sesión" title="Cerrar sesión"
                     class="flex size-10 items-center justify-center rounded-full transition hover:bg-superficie">
@@ -47,14 +48,14 @@
     <main id="contenido" class="vt-contenido w-full px-5 pb-32" @hasSection('hoja') inert @endif>
         {{-- Mensajes flash: los controladores usan ->with('success', ...) o ->with('error', ...) --}}
         @if (session('success'))
-            <x-alerta tipo="exito" class="mt-2">{{ session('success') }}</x-alerta>
+            <x-alerta tipo="exito" class="mt-2 print:hidden">{{ session('success') }}</x-alerta>
         @endif
         @if (session('error'))
-            <x-alerta tipo="error" class="mt-2">{{ session('error') }}</x-alerta>
+            <x-alerta tipo="error" class="mt-2 print:hidden">{{ session('error') }}</x-alerta>
         @endif
         {{-- Alerta de stock bajo al registrar un movimiento (MovimientoController) --}}
         @if (session('aviso'))
-            <x-alerta tipo="aviso" class="mt-2">{{ session('aviso') }}</x-alerta>
+            <x-alerta tipo="aviso" class="mt-2 print:hidden">{{ session('aviso') }}</x-alerta>
         @endif
 
         @yield('content')
@@ -72,7 +73,7 @@
     @endphp
     {{-- Con una hoja abierta, la barra se sigue viendo pero queda inerte (la hoja es modal) --}}
     <nav aria-label="Navegación principal" @hasSection('hoja') inert @endif
-        class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2.5 pb-[max(34px,env(safe-area-inset-bottom))]">
+        class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2.5 pb-[max(34px,env(safe-area-inset-bottom))] print:hidden">
         <div class="vt-barra pointer-events-auto relative rounded-full bg-tinta/60 p-2 shadow-nav backdrop-blur-lg">
             @if ($indiceActivo !== false)
                 {{--

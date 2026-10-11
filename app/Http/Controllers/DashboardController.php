@@ -13,13 +13,8 @@ class DashboardController extends Controller
 {
     public function __invoke()
     {
-        // Productos en alerta (RN-02), del mayor al menor faltante (stock_minimo - stock_actual)
-        $alertas = Producto::with('categoria')
-            ->where('activo', true)
-            ->stockBajo()
-            ->orderByRaw('stock_minimo - stock_actual desc')
-            ->orderBy('nombre')
-            ->get();
+        // Productos en alerta (RN-02), del mayor al menor faltante: scope Producto::enAlerta()
+        $alertas = Producto::with('categoria')->enAlerta()->get();
 
         return view('dashboard', [
             'indicadores' => [
