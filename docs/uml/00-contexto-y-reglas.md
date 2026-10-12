@@ -4,20 +4,25 @@
 **Base:** rama `docs/uml`, creada desde `feature/icosaedro` (commit `b1cf288`; la v1 está marcada con el tag `v1.0.0` = `21ed8bd`). Laravel 12.69.2, PHP 8.2.
 **Fecha:** 2026-10-12.
 
+**Revisión 2 (2026-10-12)**
+- La traza SQL y el esquema se confirmaron en **MariaDB 10.4.32**, contra `inventario_avicola_test`. Con eso se cierran V-04 y V-05.
+- V-01 y V-02 se cerraron con una aclaración del usuario: las subclases Cliente, Administrador y Repartidor vienen del análisis original de la materia.
+- Cada archivo tiene ahora una **priorización** al inicio.
+
 **Archivos de este paquete**
 
 | Archivo | Contenido |
 |---|---|
 | `00-contexto-y-reglas.md` | Resumen y límites, diferencias con `docs/`, actores y permisos, reglas e invariantes, glosario, trazabilidad, lista de [VERIFICAR] |
-| `01-casos-de-uso.md` | Límite del sistema, paquetes, casos de uso UC-01…UC-30, relaciones `<<include>>`/`<<extend>>`, cobertura de rutas |
-| `02-clases.md` | Esquema real de la base de datos, clases de dominio y enums, capa de aplicación, notas de modelado |
-| `03-secuencias.md` | Escenarios SEQ-01…SEQ-18 con participantes, mensajes, fragmentos, transacciones y orden real de SQL |
+| `01-casos-de-uso.md` | **§0 priorización** (15 casos de uso principales, 4 de soporte, omitibles y agrupación por paquete). Además: límite del sistema, paquetes, casos de uso UC-01…UC-30, relaciones `<<include>>`/`<<extend>>`, cobertura de rutas |
+| `02-clases.md` | **§0 priorización** (qué atributos y métodos mostrar u omitir en cada una de las 3 vistas). Además: esquema real de la base de datos, clases de dominio y enums, capa de aplicación, notas de modelado |
+| `03-secuencias.md` | **Priorización** (las 8 secuencias imprescindibles, en orden). Además: escenarios SEQ-00…SEQ-18 con participantes, mensajes, fragmentos, transacciones y orden real de SQL |
 
 **Cómo se citan las fuentes**
 - Código: `ruta/archivo.php:línea` o `Clase::método`.
 - Rutas: por su nombre, por ejemplo `productos.store` (`routes/web.php`).
 - Pruebas: `ClaseTest::test_nombre`, en `tests/Feature/`.
-- SQL: traza tomada con `DB::listen` en un test temporal (sin commitear) contra una base de pruebas, nunca la de desarrollo. Ver `03-secuencias.md` §0.
+- SQL: traza tomada con `DB::listen` en un test temporal (sin commitear), en MariaDB 10.4.32 contra `inventario_avicola_test`, nunca la de desarrollo. Ver `03-secuencias.md` §0.
 - `[VERIFICAR]` marca lo que no se pudo confirmar en el sistema. La lista completa está en la §7.
 
 **IDs**
@@ -80,7 +85,7 @@ No se corrigió ningún documento de `docs/`. Esta tabla las registra.
 
 | ID | Tema | Lo que dice el doc | Lo que hace el sistema | Fuente |
 |---|---|---|---|---|
-| DIF-01 | Actores Cliente y Repartidor | `docs/01` §9: "Gestión de pedidos y clientes" y "Asignación y seguimiento de repartidores" existen "en el análisis original de la materia"; `docs/01` §2 ya define solo 2 actores | No existen actores, roles, tablas ni rutas para clientes o repartidores. `users.rol` solo admite `admin` y `encargado` | `database/migrations/2026_09_12_043713_add_rol_and_activo_to_users_table.php:15`; `routes/web.php`; `User::ROLES`. [VERIFICAR] V-01 |
+| DIF-01 | Actores Cliente y Repartidor | `docs/01` §9: "Gestión de pedidos y clientes" y "Asignación y seguimiento de repartidores" existen "en el análisis original de la materia"; `docs/01` §2 ya define solo 2 actores | No existen actores, roles, tablas ni rutas para clientes o repartidores. `users.rol` solo admite `admin` y `encargado`. Aclaración del usuario: en el análisis original eran subclases de usuario, junto con Administrador (DIF-27) | `database/migrations/2026_09_12_043713_add_rol_and_activo_to_users_table.php:15`; `routes/web.php`; `User::ROLES`. V-01 (cerrado) |
 | DIF-02 | Tabla `users` frente a "usuarios" | `docs/04` §3: "User.php (viene por defecto, es tu tabla usuarios)". `docs/03` ya usa `users` | La tabla es `users` (la de Laravel), con columnas en inglés (`name`, `email`, `password`) más `rol` y `activo`. El resto del dominio está en español: llave foránea `movimientos_inventario.usuario_id → users.id`, URL `/usuarios`, `UsuarioController`, parámetro `{usuario}`. La clase es `User` | `database/migrations/0001_01_01_000000_create_users_table.php`; `routes/web.php:66-71`; `MovimientoInventario::usuario()` |
 | DIF-03 | Valores de rol | `docs/01` §2: "Administrador", "Encargado de Inventario". `docs/03`: `ENUM('admin','encargado') NOT NULL` sin valor por defecto | `ENUM('admin','encargado') NOT NULL DEFAULT 'encargado'`. Etiquetas en `User::ROLES`: `admin` → "Administrador", `encargado` → "Encargado de inventario" | migración `2026_09_12_043713`:15; `app/Models/User.php:54-57` |
 | DIF-04 | Columnas internas de `users` | `docs/03` omite a propósito `email_verified_at` y `remember_token` | Existen, pero la app no las usa (no hay "recordarme" ni verificación de correo). `Auth::logout()` solo renueva `remember_token` si no está vacío: las cuentas creadas por la app o el seeder lo tienen en `NULL` | migración `users`; `UsuarioController::store`; `DatabaseSeeder:27-41`; traza SEQ-09 |
@@ -104,10 +109,10 @@ No se corrigió ningún documento de `docs/`. Esta tabla las registra.
 | DIF-22 | Pantallas nuevas | Los docs no mencionan Inicio ni Buscar | **Inicio** (`/home`): saludo, accesos por rol y aviso de stock bajo. **Buscar** (`/search`): productos para los dos roles; además categorías y usuarios para el admin | `InicioController`; `BusquedaController`; `config/navegacion.php` |
 | DIF-23 | Rutas | `docs/04` §5: `Route::resource` de productos, categorías y usuarios con `role:admin`; `/movimientos/nuevo`; `/dashboard` sin nombre | Ver los detalles debajo de la tabla | `routes/web.php`; `php artisan route:list` |
 | DIF-24 | Capas (dónde se valida) | `docs/04` §4: "ProductoController@store valida" | Ver los detalles debajo de la tabla | `app/Http/Requests/*`; comentario en `MovimientoRequest.php:8-13`; `bootstrap/app.php:15-18` |
-| DIF-25 | Modelo de datos | `docs/03` §1: `int id`, sin timestamps en el diagrama | `BIGINT UNSIGNED` autoincremental. Todas las tablas tienen `created_at` y `updated_at`. Índice por `fecha` en movimientos (migración `2026_10_11_120000`). Llaves foráneas sin borrado en cascada | `database/migrations/*` |
+| DIF-25 | Modelo de datos | `docs/03` §1: `int id`, sin timestamps en el diagrama | `bigint(20) unsigned` autoincremental. Todas las tablas tienen `created_at` y `updated_at`, y son InnoDB con `utf8mb4_unicode_ci`. Índice `movimientos_inventario_fecha_index` (migración `2026_10_11_120000`). Las 3 llaves foráneas son `ON UPDATE RESTRICT` y `ON DELETE RESTRICT`: no hay borrado en cascada | `database/migrations/*`; confirmado en MariaDB con `SHOW CREATE TABLE`, `db:table --json` e `information_schema` (`02-clases.md` §A) |
 | DIF-26 | RN-09 (inmutables) | Regla de negocio | Además de no tener rutas, el modelo lanza `LogicException` si se intenta actualizar o borrar un movimiento | `MovimientoInventario::booted`; `MovimientoTest::test_rn09_un_movimiento_no_se_edita_ni_se_elimina` |
-| DIF-27 | "Subclases de rol como en docs/03" (consigna de este paquete) | Se pide comparar el rol como atributo con "subclases como en docs/03" | `docs/03` (v1.0 en el repo) **no** tiene diagrama de clases ni subclases: su diagrama ER modela `rol` como atributo `enum` de USERS. El sistema hace lo mismo: un solo modelo `User` con el atributo `rol` | `docs/03-modelo-datos.md` §1; `app/Models/User.php`. [VERIFICAR] V-02 |
-| DIF-28 | RNF-04 (sesión de 30 min) | 30 minutos de inactividad | `.env.example` trae `SESSION_LIFETIME=30` (está probado). El valor efectivo depende del `.env` de cada equipo | `.env.example:33`; `AutenticacionTest::test_la_plantilla_del_env_fija_la_sesion_en_30_minutos`. [VERIFICAR] V-03 |
+| DIF-27 | Subclases de usuario (Cliente, Administrador, Repartidor) | Vienen del **análisis original de la materia**, no de `docs/` (aclaración del usuario; ese análisis no está en el repo). `docs/` **no** tiene subclases: el diagrama ER de `docs/03` modela `rol` como atributo `enum` de USERS, y `docs/01` §2 define solo Administrador y Encargado | El sistema usa **un solo** modelo `User` con `rol` = `enum('admin','encargado')`; no hay subclases. Cliente y Repartidor no existen (DIF-01). Administrador es un valor de `rol`, no una clase. Cómo modelarlo: `02-clases.md` §D.1 | `docs/03-modelo-datos.md` §1; `docs/01-requerimientos.md` §2; `app/Models/User.php`; migración `2026_09_12_043713:15`. V-02 (cerrado) |
+| DIF-28 | RNF-04 (sesión de 30 min) | 30 minutos de inactividad | `.env.example` trae `SESSION_LIFETIME=30` (está probado). El valor efectivo depende del `.env` de cada equipo: en este equipo es **120** (`php artisan config:show session.lifetime`), así que RNF-04 no se cumple aquí hasta cambiar el `.env` | `.env.example:33`; `AutenticacionTest::test_la_plantilla_del_env_fija_la_sesion_en_30_minutos`. [VERIFICAR] V-03 |
 | DIF-29 | Sesiones y caché en la base de datos | No se menciona | Con la configuración de `.env.example` (`SESSION_DRIVER=database`, `CACHE_STORE=database`), la sesión vive en la tabla `sessions` y el contador de intentos del login en la tabla `cache`. Aparecen como consultas de infraestructura en las secuencias | `.env.example:32, 42`; traza con `DB::listen` (`03-secuencias.md` §0) |
 | DIF-30 | Cerrar sesión | No hay caso de uso | `POST /logout` desde el botón "Cerrar sesión" del encabezado: UC-03 | `routes/web.php:35`; `resources/views/layouts/app.blade.php:36-42` |
 
@@ -352,8 +357,8 @@ Capas: **BD** (restricción en la base de datos), **FormRequest**, **Modelo**, *
 | ID | Invariante | Dónde se garantiza | Fuente |
 |---|---|---|---|
 | INV-01 | `productos.stock_actual ≥ 0` | Aplicación (RN-01). La BD no tiene `CHECK`: la columna es `DECIMAL(10,2)` con signo | `MovimientoInventario::registrar:85`; migración `create_productos_table:19` |
-| INV-02 | Todo movimiento referencia un producto y un usuario existentes | BD: llaves foráneas `NOT NULL`, sin borrado en cascada | migración `create_movimientos_inventario_table:16-17` |
-| INV-03 | Todo producto pertenece a una categoría existente | BD: llave foránea `NOT NULL` hacia `categorias` | migración `create_productos_table:17` |
+| INV-02 | Todo movimiento referencia un producto y un usuario existentes | BD: llaves foráneas `NOT NULL` `movimientos_inventario_producto_id_foreign` y `movimientos_inventario_usuario_id_foreign`, con `ON DELETE RESTRICT` (sin borrado en cascada) | migración `create_movimientos_inventario_table:16-17`; `information_schema.REFERENTIAL_CONSTRAINTS` (`02` §A.2) |
+| INV-03 | Todo producto pertenece a una categoría existente | BD: llave foránea `NOT NULL` `productos_categoria_id_foreign` hacia `categorias`, con `ON DELETE RESTRICT` | migración `create_productos_table:17`; `02` §A.2 |
 | INV-04 | El correo de usuario es único | BD (`users_email_unique`) + FormRequest | migración `users:17`; `UsuarioRequest:39` |
 | INV-05 | El nombre de categoría es único | BD (`categorias_nombre_unique`) + FormRequest | migración `create_categorias_table:16`; `CategoriaRequest:36` |
 | INV-06 | Siempre hay al menos un administrador activo | Consecuencia de RN-07: solo un administrador activo gestiona usuarios y nunca puede desactivarse a sí mismo. La BD no lo restringe. Ver V-08 | `UsuarioRequest`; `UsuarioController::cambiarEstado` |
@@ -492,7 +497,7 @@ El número entre paréntesis es la cantidad de métodos `test_*` de la clase (Gr
 | RNF-01 Responsivo de 320 a 1920 px | README §introducción ("responsive de 320 a 1920 px"). No hay prueba automática |
 | RNF-02 Contraste WCAG AA | README §introducción ("con contraste WCAG AA"). No hay prueba automática |
 | RNF-03 Sistema de diseño | `resources/css/input.css` (`@theme`); componentes en `resources/views/components/` |
-| RNF-04 Sesión de 30 min | `.env.example:33`; `AutenticacionTest::test_la_plantilla_del_env_fija_la_sesion_en_30_minutos`. Ver V-03 |
+| RNF-04 Sesión de 30 min | `.env.example:33`; `AutenticacionTest::test_la_plantilla_del_env_fija_la_sesion_en_30_minutos`. En este equipo el valor efectivo es 120 (ver V-03) |
 | RNF-05 Contraseñas con hash | `User::casts:48` (`hashed`, bcrypt); `UsuarioTest::test_crear_un_usuario_con_contrasena_inicial` |
 | RNF-06 Carga ≤ 3 s | Sin prueba automática. Las pruebas N+1 limitan las consultas: `ProductoTest::test_el_listado_no_hace_una_consulta_por_producto`, `DashboardTest::test_el_dashboard_no_hace_una_consulta_por_producto`, `HistorialTest::test_el_historial_no_hace_una_consulta_por_movimiento`, `ReporteTest::test_*_n_mas_1` y similares |
 | RNF-07 Feedback visual | `public/js/app.js:3-38` (spinner y botón deshabilitado al enviar); mensajes flash (`InterfazTest::test_el_layout_muestra_los_mensajes_flash`) |
@@ -502,17 +507,37 @@ El número entre paréntesis es la cantidad de métodos `test_*` de la clase (Gr
 
 ## 7. Lista de [VERIFICAR]
 
+### 7.1 Abiertos
+
 | ID | Qué falta confirmar | Por qué no se pudo confirmar | Dónde aparece |
 |---|---|---|---|
-| V-01 | Definición original de los actores Cliente y Repartidor ("análisis original de la materia") | Ese documento no está en el repositorio; solo lo menciona `docs/01` §9 | DIF-01 |
-| V-02 | A qué documento se refiere la consigna con "subclases como en docs/03" | `docs/03` del repo no tiene subclases (rol es un atributo `enum`) | DIF-27; `02-clases.md` §D |
-| V-03 | Valor real de `SESSION_LIFETIME` en el `.env` de cada equipo (RNF-04) | El `.env` no se lee por regla del proyecto; `.env.example` trae 30 | DIF-28; §6.5 |
-| V-04 | Nombres exactos de los índices que MySQL crea para las llaves foráneas (`productos_categoria_id_foreign`, `movimientos_inventario_producto_id_foreign`, `movimientos_inventario_usuario_id_foreign`) | Se dedujeron de las convenciones de Laravel e InnoDB; MySQL (XAMPP) estaba apagado y no se pudo correr `php artisan db:table` | `02-clases.md` §A |
-| V-05 | Texto exacto en MySQL de las consultas trazadas: sufijo `for update` en la lectura del producto y nombre del savepoint (`SAVEPOINT trans2`) | La traza con `DB::listen` se tomó con SQLite en memoria (MySQL apagado). SQLite ignora `lockForUpdate` y no registra `SAVEPOINT`. El README registra que `MovimientoTest::test_rn04_en_mysql_la_fila_del_producto_se_bloquea_con_for_update` lo comprobó en MySQL en la Fase 9 | `03-secuencias.md` §0, SEQ-04 a SEQ-08 |
-| V-06 | Qué pasa si una carrera agrega un producto a una categoría entre el conteo y el borrado (UC-15) | No hay prueba de concurrencia. Por el esquema, la llave foránea sin `ON DELETE` rechazaría el `DELETE` con un error de integridad (respuesta 500) | `01-casos-de-uso.md` UC-15; `03-secuencias.md` SEQ-10 |
+| V-03 | Valor de `SESSION_LIFETIME` en el `.env` de cada equipo (RNF-04) | El `.env` no se lee entero por regla del proyecto. `.env.example` trae 30. **En este equipo el valor efectivo es 120** (`php artisan config:show session.lifetime`). En el portátil, sin verificar | DIF-28; §6.5 |
+| V-06 | Qué pasa si una carrera agrega un producto a una categoría entre el conteo y el borrado (UC-15) | No hay prueba de concurrencia. Por el esquema, la llave foránea `productos_categoria_id_foreign` (`ON DELETE RESTRICT`) rechazaría el `DELETE` con un error de integridad (respuesta 500) | `01-casos-de-uso.md` UC-15; `03-secuencias.md` SEQ-10 |
 | V-07 | Duplicados de nombre de producto por una carrera entre dos creaciones simultáneas | La unicidad solo está en la aplicación (DIF-14); no hay prueba de concurrencia | DIF-14; UC-09 |
 | V-08 | INV-06 ante dos administradores que se desactivan mutuamente **a la vez** | Cada petición solo verifica "no es tu propia cuenta"; no hay bloqueo ni verificación de "queda otro administrador activo". En peticiones secuenciales no ocurre: el primero en ser desactivado es expulsado antes de actuar. No hay prueba | INV-06; UC-23 |
 | V-09 | Si con un id inexistente debe responder 404 antes que 403 en rutas de admin (encargado o cuenta inactiva) | Es efecto del orden del middleware del framework (binding antes de `activo` y `role`); no hay prueba ni requisito | §3.3; `01-casos-de-uso.md` §3 |
 | V-10 | Errores de formato en el login (campos vacíos o correo inválido): vuelven a `url()->previous()` (Referer o la URL guardada en sesión), no a `route('login')` como los demás errores del login | En el uso normal es `/login` y el token CSRF impide un envío desde otro sitio. `SeguridadTest` solo cubre el error de credenciales | `01-casos-de-uso.md` UC-01 E1; `03-secuencias.md` SEQ-01 |
 
 V-06 a V-10 no son errores de esta documentación. Son comportamientos deducidos del código que ninguna prueba cubre. Quedan como insumo para la auditoría pendiente; no se cambió nada de la aplicación.
+
+### 7.2 Cerrados en la revisión 2
+
+| ID | Qué era | Cómo se cerró | Resultado |
+|---|---|---|---|
+| V-01 | Definición original de los actores Cliente y Repartidor | Aclaración del usuario (2026-10-12) | En el análisis original de la materia eran subclases de usuario, junto con Administrador. No existen en el sistema real ni en `docs/`, y quedan fuera de alcance (DIF-01, DIF-27) |
+| V-02 | De dónde salían las "subclases como en docs/03" | Aclaración del usuario: fue un error de la consigna | Las subclases vienen del análisis original, no de `docs/03`. `docs/` no tiene subclases y el sistema usa un solo `User` con `rol` enum (DIF-27; `02-clases.md` §D.1) |
+| V-04 | Nombres de los índices de las llaves foráneas | `SHOW CREATE TABLE`, `php artisan db:table --json` e `information_schema` en MariaDB 10.4.32 (`inventario_avicola_test`) | Ver los detalles debajo de la tabla |
+| V-05 | Texto exacto en MySQL del `for update` y del savepoint | Traza con `DB::listen` en MariaDB 10.4.32 (`inventario_avicola_test`), un PDO que anota las llamadas de transacción y los contadores `Com_*` de la sesión | Ver los detalles debajo de la tabla |
+
+**V-04 en detalle**
+- Los índices de las llaves foráneas se llaman como la restricción: `productos_categoria_id_foreign`, `movimientos_inventario_producto_id_foreign` y `movimientos_inventario_usuario_id_foreign`.
+- Las tres llaves son `ON UPDATE RESTRICT` y `ON DELETE RESTRICT`.
+- Todas las tablas son InnoDB con `utf8mb4_unicode_ci`.
+- Detalle en `02-clases.md` §A.
+
+**V-05 en detalle**
+- Bloqueo: ``select * from `productos` where `productos`.`id` = ? limit 1 for update``.
+- Savepoint: `PDO::exec("SAVEPOINT trans2")`. El servidor contó `Com_savepoint +1` y `Com_release_savepoint +0`.
+- Si falla dentro del savepoint: `ROLLBACK TO SAVEPOINT trans2` y después `PDO::rollBack()`.
+- Inicio y fin de transacción: `PDO::beginTransaction()` y `PDO::commit()` / `PDO::rollBack()`.
+- Detalle en `03-secuencias.md` §0.2.

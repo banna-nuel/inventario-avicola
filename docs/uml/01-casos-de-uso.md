@@ -5,6 +5,66 @@
 
 ---
 
+## 0. Priorización (para no dibujar los 30 casos de uso)
+
+Este archivo documenta 30 casos de uso para que ninguna ruta quede sin cubrir. Para el diagrama alcanza con los 15 principales, más 4 de soporte pegados a ellos.
+
+### 0.1 Los 15 casos de uso principales (objetivos de usuario)
+
+| Orden | Óvalo en el diagrama | UC | Actor | Paquete | Por qué es principal |
+|---|---|---|---|---|---|
+| 1 | Registrar salida de stock | UC-17 | Usuario (ambos roles) | Inventario | Núcleo del negocio: RN-01, RN-04 y la alerta de stock bajo |
+| 2 | Registrar entrada de stock | UC-16 | Usuario | Inventario | RF-06; también extiende a "Registrar producto" (stock inicial) |
+| 3 | Consultar productos y stock | UC-07 | Usuario | Consulta | CU-06: stock, unidad y estado |
+| 4 | Consultar historial de movimientos | UC-08 | Usuario | Consulta | RF-08: filtros por producto, tipo y fechas |
+| 5 | Ver Dashboard | UC-05 | Usuario | Consulta | RF-03 y RF-07: indicadores y alertas |
+| 6 | Iniciar sesión | UC-01 | Usuario (sin sesión) | Autenticación | RF-01 |
+| 7 | Registrar producto | UC-09 | Administrador | Catálogo | CU-02 |
+| 8 | Editar producto | UC-10 | Administrador | Catálogo | CU-03 |
+| 9 | Desactivar o activar producto | UC-11 | Administrador | Catálogo | RN-03. Se dibuja como `<<extend>>` de UC-10 |
+| 10 | Gestionar categorías | UC-12 a UC-15 (agrupados) | Administrador | Catálogo | RF-05: consultar, registrar, editar y eliminar en un solo óvalo |
+| 11 | Registrar usuario | UC-21 | Administrador | Administración | CU-07 |
+| 12 | Editar usuario | UC-22 | Administrador | Administración | CU-07 y RN-07 (no quitarse el rol) |
+| 13 | Desactivar o activar usuario | UC-23 | Administrador | Administración | RN-03 y RN-07. Se dibuja como `<<extend>>` de UC-22 |
+| 14 | Generar reporte | UC-24 a UC-26 (agrupados) | Administrador | Reportes | RF-10: stock por categoría, stock bajo y más movidos |
+| 15 | Buscar | UC-06 | Usuario | Consulta | RF-13. El administrador ve más grupos (nota) |
+
+### 0.2 De soporte: se dibujan pegados a un principal
+
+| UC | Relación | Con | Condición |
+|---|---|---|---|
+| UC-18 Validar stock disponible | `<<include>>` | UC-17 | Siempre, en toda salida |
+| UC-19 Mostrar alerta de stock bajo | `<<extend>>` | UC-16 y UC-17 | El producto queda o sigue bajo su mínimo |
+| UC-02 Bloquear acceso por intentos fallidos | `<<extend>>` | UC-01 | 3 intentos fallidos por correo e IP en 60 s |
+| UC-27 Imprimir reporte | `<<extend>>` | Generar reporte | El administrador pulsa "Imprimir" |
+
+UC-16 también extiende a UC-09 (`<<extend>>` [`stock_inicial > 0`]). Es la misma flecha de §5.1, entre dos óvalos principales.
+
+### 0.3 Se pueden omitir del diagrama
+
+| UC | Por qué se puede omitir | Qué poner en su lugar |
+|---|---|---|
+| UC-28, UC-29, UC-30 (transversales) | Son mecanismos del sistema (middleware), no objetivos de un actor | Una nota en el límite del sistema: "todo caso de uso con sesión verifica sesión y cuenta activa; los de administrador, además, el rol (403)" |
+| UC-03 Cerrar sesión, UC-04 Ver Inicio | Son navegación, de poco valor en el diagrama | Nada, o dibujarlos si sobra espacio |
+| UC-12 Consultar categorías, UC-13, UC-14, UC-15 | Ya están dentro de "Gestionar categorías" | El óvalo agrupado |
+| UC-20 Consultar usuarios | Es el listado desde el que se llega a UC-21 a UC-23 | Nada, o agrupar UC-20 a UC-22 como "Gestionar usuarios" |
+| UC-24, UC-25, UC-26 por separado | Ya están en "Generar reporte" | El óvalo agrupado (o una generalización, §5.2) |
+
+### 0.4 Agrupación por paquete
+
+| Paquete | Principales | Soporte | Omitibles |
+|---|---|---|---|
+| Autenticación | UC-01 | UC-02 | UC-03, UC-28, UC-29 |
+| Consulta | UC-05, UC-06, UC-07, UC-08 | — | UC-04 |
+| Inventario | UC-16, UC-17 | UC-18, UC-19 | — |
+| Catálogo | UC-09, UC-10, UC-11, Gestionar categorías (UC-12 a UC-15) | (UC-16 extiende a UC-09) | — |
+| Administración | UC-21, UC-22, UC-23 | — | UC-20, UC-30 |
+| Reportes | Generar reporte (UC-24 a UC-26) | UC-27 | — |
+
+**Resultado:** 15 óvalos principales y 4 de soporte, con 2 actores (Administrador y Encargado de inventario), o 3 si se usa el actor abstracto *Usuario* (§1.1 y `00` §3.2).
+
+---
+
 ## 1. Límite del sistema y paquetes
 
 ### 1.1 Límite del sistema
@@ -1175,7 +1235,7 @@ Casos de uso **sin ruta propia**:
 
 ## 7. Notas para el modelador (casos de uso)
 
-1. **Granularidad:** este paquete separa crear, editar y estado para que coincidan con las rutas y las secuencias. Si se prefiere un diagrama más corto, se pueden agrupar:
+1. **Granularidad:** este paquete separa crear, editar y estado para que coincidan con las rutas y las secuencias. La versión reducida recomendada para el diagrama está en §0 (15 principales y 4 de soporte). Si se prefiere un diagrama todavía más corto, se pueden agrupar:
    - "Gestionar categorías" = UC-12 a UC-15.
    - "Gestionar usuarios" = UC-20 a UC-23 (igual que CU-07).
    - "Gestionar productos" = UC-09 a UC-11.

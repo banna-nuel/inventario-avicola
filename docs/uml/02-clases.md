@@ -1,7 +1,7 @@
 # UML · 02 — Clases
 
 **Fuentes:**
-- `database/migrations/*` (esquema).
+- `database/migrations/*`, confirmado en **MariaDB 10.4.32** (`inventario_avicola_test`).
 - `app/Models/*`, `app/Enums/UnidadMedida.php`.
 - `app/Http/{Controllers,Requests,Middleware}/*`, `bootstrap/app.php`, `routes/web.php`.
 
@@ -10,79 +10,139 @@
 
 ---
 
+## 0. Priorización: qué mostrar y qué omitir en cada vista
+
+Se sugieren tres diagramas pequeños en lugar de uno grande. Las tablas dicen qué atributos y métodos poner en cada clase. El detalle completo de cada clase está en §B y §C.
+
+### Vista 1 — Dominio (`User`, `Categoria`, `Producto`, `MovimientoInventario`)
+
+| Clase | Atributos: mostrar | Atributos: omitir | Métodos: mostrar | Métodos: omitir |
+|---|---|---|---|---|
+| `User` | `id`, `name`, `email`, `password` (hash), `rol: Rol`, `activo: Boolean` | `email_verified_at`, `remember_token` (sin uso), `created_at`, `updated_at`, la constante `ROLES` (la representa la enumeración `Rol`) | `+ esAdmin(): Boolean` | `enlaces()` (navegación de la interfaz), `casts()`, los heredados de `Authenticatable` |
+| `Categoria` | `id`, `nombre` | `created_at`, `updated_at`, `productos_count` (derivado de una consulta) | — | `productos()`: es el extremo de la asociación R1, no se dibuja como método |
+| `Producto` | `id`, `nombre`, `unidad_medida: UnidadMedida`, `stock_actual: Decimal {readOnly}`, `stock_minimo: Decimal`, `activo: Boolean` | `categoria_id` (lo muestra la asociación R1), `created_at`, `updated_at`, los derivados del reporte (`movimientos_count`, `entradas`, `salidas`) | `+ enStockBajo(): Boolean`, `+ faltante(): Decimal`, `+ stockBajo() «scope»`, `+ enAlerta() «scope»` | `categoria()` y `movimientos()` (son extremos de asociación), `casts()` |
+| `MovimientoInventario` | `id`, `tipo: TipoMovimiento`, `cantidad: Decimal`, `fecha: DateTime` | `producto_id` y `usuario_id` (los muestran R2 y R3), `created_at`, `updated_at` | `+ registrar(producto, tipo, cantidad, usuario, fecha [0..1]): MovimientoInventario «static»` | `producto()` y `usuario()` (extremos de asociación); `booted()` (se representa como la restricción `{inmutable}`); `casts()` |
+
+**Además:**
+- **Relaciones:** R1, R2 y R3, con multiplicidades y nombres de rol (§B.7).
+- **Restricciones:**
+  - `{stock_actual = Σ entradas − Σ salidas}` y `{stock_actual >= 0}` en `Producto`.
+  - `{inmutable}` en `MovimientoInventario`.
+- **Tipos:** `UnidadMedida`, `Rol` y `TipoMovimiento` como referencias; su detalle va en la vista 3.
+
+### Vista 2 — Aplicación (controladores, Form Requests y middleware)
+
+| Elemento | Mostrar | Omitir |
+|---|---|---|
+| 9 controladores | Ver los detalles debajo de la tabla | Los métodos privados (`listado`, `filtros`, `historial`, `volver` y los `productos/categorias/usuarios` de `BusquedaController`). Las constantes, salvo `AuthController::MAX_INTENTOS = 3` y `SEGUNDOS_BLOQUEO = 60`, que pueden ir como nota. Los tipos de retorno (el código no los declara) |
+| 6 Form Requests | El nombre y `rules()`. Los métodos propios públicos: `FiltrosHistorialRequest::filtros()`, `RangoFechasRequest::desde()` y `RangoFechasRequest::hasta()`. El atributo `$redirectRoute` donde existe | `authorize()` (siempre `true`), `messages()`, `prepareForValidation()` (como nota, si se quiere), los métodos privados |
+| 2 middleware propios | `UsuarioActivo::handle(request, next)` y `VerificarRol::handle(request, next, ...roles)` | `auth`, `guest` y el grupo `web` (son del framework): basta una nota con el orden real (`00` §3.3) |
+| Clases del dominio | Solo el nombre (cajas sin atributos), como destino de las dependencias `«use»` (§C.5) | Atributos y métodos: ya están en la vista 1 |
+| Clases base | `Controller` (abstracta) y `FormRequest` (del framework, como nombre) | `Model`, `ServiceProvider`, `Component` |
+
+**Controladores, qué mostrar:**
+- El nombre y sus métodos **públicos** de acción, con el tipo del parámetro (`Request`, el Form Request o el modelo). Por ejemplo: `+ store(MovimientoRequest)`, `+ cambiarEstado(Request, Producto)`.
+- Opcional: una nota con la ruta junto a cada método (§C.1).
+
+### Vista 3 — Enumeraciones
+
+| Enumeración | Mostrar | Omitir |
+|---|---|---|
+| `UnidadMedida` (enum de PHP) | Los 7 literales con su valor; `singular()`, `nombrePara()`, `cantidad()` | `opciones()` y `numero()`: son auxiliares de las vistas; opcionales |
+| `Rol` (implícita) | `admin`, `encargado` y sus etiquetas ("Administrador", "Encargado de inventario") | — |
+| `TipoMovimiento` (implícita) | `entrada`, `salida` | — |
+| `EstadoFiltroProducto`, `GrupoBusqueda`, `DestinoVolver` (implícitas) | — | Se omiten por defecto: son detalles de los controladores. Solo van si se documenta la capa de aplicación en detalle |
+
+Las enumeraciones "implícitas" no son clases PHP. Conviene marcarlas así en el diagrama (§B.6).
+
+---
+
 ## A. Esquema real de la base de datos
 
 ### A.0 Cómo se obtuvo
 
-- **Columnas, nulabilidad, valores por defecto, llaves y restricciones únicas:** salen de las migraciones actuales. Ninguna migración posterior las cambia, salvo `2026_09_12_043713` (agrega `rol` y `activo` a `users`) y `2026_10_11_120000` (agrega el índice por `fecha`).
-- **Tipos MySQL:** son los que genera la gramática MySQL de Laravel 12 para cada método del *schema builder*. Por ejemplo, `id()` genera `BIGINT UNSIGNED AUTO_INCREMENT` y `boolean()` genera `TINYINT(1)`.
-- **Motor:** MySQL/MariaDB de XAMPP. Se usa el motor por defecto (`engine = null` en `config/database.php`), es decir InnoDB, con `utf8mb4` / `utf8mb4_unicode_ci` (README, paso 4).
-- **[VERIFICAR] V-04:** no se pudo correr `php artisan db:table` ni `model:show` porque MySQL (XAMPP) estaba apagado. Los nombres de los índices que InnoDB crea para las llaves foráneas se dedujeron de la convención: el índice toma el nombre de la restricción.
+**Fuente:** las migraciones actuales. Ninguna migración posterior las cambia, salvo dos:
+- `2026_09_12_043713`, que agrega `rol` y `activo` a `users`.
+- `2026_10_11_120000`, que agrega el índice por `fecha`.
+
+**Confirmado en MariaDB 10.4.32**, en la base `inventario_avicola_test` recién migrada por la prueba temporal (cierra V-04), con:
+- `SHOW CREATE TABLE` de cada tabla.
+- `php artisan db:table <tabla> --json`. El modo texto necesita la extensión `intl` de PHP, que no está activa en el PHP de XAMPP; se usó `--json`, que da los mismos datos.
+- `information_schema.REFERENTIAL_CONSTRAINTS`, `STATISTICS` y `TABLES`.
+
+**Motor y juego de caracteres:** todas las tablas son **InnoDB** con collation **`utf8mb4_unicode_ci`** (`information_schema.TABLES`).
+
+**Tipos:** se escriben como los informa MariaDB (`bigint(20) unsigned`, `int(11)`, `tinyint(1)`…).
 
 ### A.1 Tablas del dominio
 
 #### `users` (modelo `User`)
 
-| Columna | Tipo MySQL | Nulo | Por defecto | Clave / índice | Origen y notas |
+| Columna | Tipo | Nulo | Por defecto | Clave / índice | Origen y notas |
 |---|---|---|---|---|---|
-| `id` | `BIGINT UNSIGNED AUTO_INCREMENT` | No | — | **PK** | `0001_01_01_000000_create_users_table.php:15` |
-| `name` | `VARCHAR(255)` | No | — | — | `:16` |
-| `email` | `VARCHAR(255)` | No | — | **UNIQUE** `users_email_unique` | `:17`. La app lo guarda en minúsculas (`UsuarioRequest`) |
-| `email_verified_at` | `TIMESTAMP` | Sí | `NULL` | — | `:18`. Sin uso en la app |
-| `password` | `VARCHAR(255)` | No | — | — | `:19`. Hash bcrypt (cast `hashed`) |
-| `remember_token` | `VARCHAR(100)` | Sí | `NULL` | — | `:20` (`rememberToken()`). Sin uso: no hay "recordarme" |
-| `created_at` | `TIMESTAMP` | Sí | `NULL` | — | `:21` (`timestamps()`) |
-| `updated_at` | `TIMESTAMP` | Sí | `NULL` | — | `:21` |
-| `rol` | `ENUM('admin','encargado')` | No | `'encargado'` | — | `2026_09_12_043713_add_rol_and_activo_to_users_table.php:15` |
-| `activo` | `TINYINT(1)` (boolean) | No | `1` | — | `2026_09_12_043713…:16` |
+| `id` | `bigint(20) unsigned` AUTO_INCREMENT | No | — | **PRIMARY** | `0001_01_01_000000_create_users_table.php:15` |
+| `name` | `varchar(255)` | No | — | — | `:16` |
+| `email` | `varchar(255)` | No | — | **UNIQUE** `users_email_unique` | `:17`. La app lo guarda en minúsculas (`UsuarioRequest`) |
+| `email_verified_at` | `timestamp` | Sí | `NULL` | — | `:18`. Sin uso en la app |
+| `password` | `varchar(255)` | No | — | — | `:19`. Hash bcrypt (cast `hashed`) |
+| `remember_token` | `varchar(100)` | Sí | `NULL` | — | `:20` (`rememberToken()`). Sin uso: no hay "recordarme" |
+| `created_at` | `timestamp` | Sí | `NULL` | — | `:21` (`timestamps()`) |
+| `updated_at` | `timestamp` | Sí | `NULL` | — | `:21` |
+| `rol` | `enum('admin','encargado')` | No | `'encargado'` | — | `2026_09_12_043713_add_rol_and_activo_to_users_table.php:15` |
+| `activo` | `tinyint(1)` (boolean) | No | `1` | — | `2026_09_12_043713…:16` |
 
 #### `categorias` (modelo `Categoria`)
 
-| Columna | Tipo MySQL | Nulo | Por defecto | Clave / índice | Origen |
+| Columna | Tipo | Nulo | Por defecto | Clave / índice | Origen |
 |---|---|---|---|---|---|
-| `id` | `BIGINT UNSIGNED AUTO_INCREMENT` | No | — | **PK** | `2026_09_12_043733_create_categorias_table.php:15` |
-| `nombre` | `VARCHAR(100)` | No | — | **UNIQUE** `categorias_nombre_unique` | `:16` |
-| `created_at` | `TIMESTAMP` | Sí | `NULL` | — | `:17` |
-| `updated_at` | `TIMESTAMP` | Sí | `NULL` | — | `:17` |
+| `id` | `bigint(20) unsigned` AUTO_INCREMENT | No | — | **PRIMARY** | `2026_09_12_043733_create_categorias_table.php:15` |
+| `nombre` | `varchar(100)` | No | — | **UNIQUE** `categorias_nombre_unique` | `:16` |
+| `created_at` | `timestamp` | Sí | `NULL` | — | `:17` |
+| `updated_at` | `timestamp` | Sí | `NULL` | — | `:17` |
 
 #### `productos` (modelo `Producto`)
 
-| Columna | Tipo MySQL | Nulo | Por defecto | Clave / índice | Origen y notas |
+| Columna | Tipo | Nulo | Por defecto | Clave / índice | Origen y notas |
 |---|---|---|---|---|---|
-| `id` | `BIGINT UNSIGNED AUTO_INCREMENT` | No | — | **PK** | `2026_09_12_043741_create_productos_table.php:15` |
-| `nombre` | `VARCHAR(150)` | No | — | — (**sin** UNIQUE: la unicidad está solo en `ProductoRequest`, DIF-14) | `:16` |
-| `categoria_id` | `BIGINT UNSIGNED` | No | — | **FK** → `categorias.id` (`productos_categoria_id_foreign`); índice de la FK | `:17` (`foreignId()->constrained('categorias')`) |
-| `unidad_medida` | `VARCHAR(20)` | No | — | — | `:18`. Valores del enum PHP `UnidadMedida` (la BD no lo restringe) |
-| `stock_actual` | `DECIMAL(10,2)` (con signo) | No | `0.00` | — | `:19`. Solo lo cambia `MovimientoInventario::registrar()` (RN-12) |
-| `stock_minimo` | `DECIMAL(10,2)` | No | — | — | `:20` |
-| `activo` | `TINYINT(1)` (boolean) | No | `1` | — | `:21` |
-| `created_at` | `TIMESTAMP` | Sí | `NULL` | — | `:22` |
-| `updated_at` | `TIMESTAMP` | Sí | `NULL` | — | `:22` |
+| `id` | `bigint(20) unsigned` AUTO_INCREMENT | No | — | **PRIMARY** | `2026_09_12_043741_create_productos_table.php:15` |
+| `nombre` | `varchar(150)` | No | — | — (**sin** UNIQUE: la unicidad está solo en `ProductoRequest`, DIF-14) | `:16` |
+| `categoria_id` | `bigint(20) unsigned` | No | — | **FK** `productos_categoria_id_foreign` → `categorias.id`; **KEY** `productos_categoria_id_foreign` | `:17` (`foreignId()->constrained('categorias')`) |
+| `unidad_medida` | `varchar(20)` | No | — | — | `:18`. Valores del enum PHP `UnidadMedida`; la BD no los restringe |
+| `stock_actual` | `decimal(10,2)` (con signo) | No | `0.00` | — | `:19`. Solo lo cambia `MovimientoInventario::registrar()` (RN-12) |
+| `stock_minimo` | `decimal(10,2)` | No | — | — | `:20` |
+| `activo` | `tinyint(1)` (boolean) | No | `1` | — | `:21` |
+| `created_at` | `timestamp` | Sí | `NULL` | — | `:22` |
+| `updated_at` | `timestamp` | Sí | `NULL` | — | `:22` |
 
 #### `movimientos_inventario` (modelo `MovimientoInventario`)
 
-| Columna | Tipo MySQL | Nulo | Por defecto | Clave / índice | Origen y notas |
+| Columna | Tipo | Nulo | Por defecto | Clave / índice | Origen y notas |
 |---|---|---|---|---|---|
-| `id` | `BIGINT UNSIGNED AUTO_INCREMENT` | No | — | **PK** | `2026_09_12_043748_create_movimientos_inventario_table.php:15` |
-| `producto_id` | `BIGINT UNSIGNED` | No | — | **FK** → `productos.id` (`movimientos_inventario_producto_id_foreign`); índice de la FK | `:16` |
-| `usuario_id` | `BIGINT UNSIGNED` | No | — | **FK** → `users.id` (`movimientos_inventario_usuario_id_foreign`); índice de la FK | `:17`. Se llama `usuario_id` aunque la tabla es `users` (DIF-02) |
-| `tipo` | `ENUM('entrada','salida')` | No | — | — | `:18` |
-| `cantidad` | `DECIMAL(10,2)` | No | — | — | `:19`. Siempre positiva; el signo lo da `tipo` |
-| `fecha` | `DATETIME` | No | `CURRENT_TIMESTAMP` | **INDEX** `movimientos_inventario_fecha_index` | `:20` (`useCurrent()`); índice en `2026_10_11_120000_add_fecha_index_to_movimientos_inventario_table.php:17` |
-| `created_at` | `TIMESTAMP` | Sí | `NULL` | — | `:21` |
-| `updated_at` | `TIMESTAMP` | Sí | `NULL` | — | `:21`. Nunca cambia después de crear (RN-09) |
+| `id` | `bigint(20) unsigned` AUTO_INCREMENT | No | — | **PRIMARY** | `2026_09_12_043748_create_movimientos_inventario_table.php:15` |
+| `producto_id` | `bigint(20) unsigned` | No | — | **FK** `movimientos_inventario_producto_id_foreign` → `productos.id`; **KEY** del mismo nombre | `:16` |
+| `usuario_id` | `bigint(20) unsigned` | No | — | **FK** `movimientos_inventario_usuario_id_foreign` → `users.id`; **KEY** del mismo nombre | `:17`. Se llama `usuario_id` aunque la tabla es `users` (DIF-02) |
+| `tipo` | `enum('entrada','salida')` | No | — | — | `:18` |
+| `cantidad` | `decimal(10,2)` | No | — | — | `:19`. Siempre positiva; el signo lo da `tipo` |
+| `fecha` | `datetime` | No | `current_timestamp()` | **KEY** `movimientos_inventario_fecha_index` | `:20` (`useCurrent()`). Índice en `2026_10_11_120000_add_fecha_index_to_movimientos_inventario_table.php:17` |
+| `created_at` | `timestamp` | Sí | `NULL` | — | `:21` |
+| `updated_at` | `timestamp` | Sí | `NULL` | — | `:21`. Nunca cambia después de crear (RN-09) |
 
 ### A.2 Llaves foráneas
 
-| Restricción | Columna | Referencia | ON DELETE | ON UPDATE | Efecto |
+| Restricción | Columna | Referencia | ON UPDATE | ON DELETE | Efecto |
 |---|---|---|---|---|---|
-| `productos_categoria_id_foreign` | `productos.categoria_id` | `categorias.id` | (no definido → RESTRICT / NO ACTION en InnoDB) | (no definido) | No se puede borrar una categoría con productos. Además lo controla `CategoriaController::destroy` (RN-15) |
-| `movimientos_inventario_producto_id_foreign` | `movimientos_inventario.producto_id` | `productos.id` | (no definido → RESTRICT) | (no definido) | No se puede borrar un producto con movimientos. La app nunca borra productos (RN-03) |
-| `movimientos_inventario_usuario_id_foreign` | `movimientos_inventario.usuario_id` | `users.id` | (no definido → RESTRICT) | (no definido) | No se puede borrar un usuario con movimientos. La app nunca borra usuarios (RN-03) |
+| `productos_categoria_id_foreign` | `productos.categoria_id` | `categorias.id` | **RESTRICT** | **RESTRICT** | No se puede borrar una categoría con productos. Además lo controla `CategoriaController::destroy` (RN-15) |
+| `movimientos_inventario_producto_id_foreign` | `movimientos_inventario.producto_id` | `productos.id` | **RESTRICT** | **RESTRICT** | No se puede borrar un producto con movimientos. La app nunca borra productos (RN-03) |
+| `movimientos_inventario_usuario_id_foreign` | `movimientos_inventario.usuario_id` | `users.id` | **RESTRICT** | **RESTRICT** | No se puede borrar un usuario con movimientos. La app nunca borra usuarios (RN-03) |
 
-No hay borrado en cascada en ninguna llave foránea. Fuente: las migraciones usan `constrained()` sin `cascadeOnDelete()`. Los nombres de las restricciones son la convención de Laravel (`{tabla}_{columna}_foreign`). Ver V-04.
+**Sobre las reglas:**
+- **Fuente:** `information_schema.REFERENTIAL_CONSTRAINTS` (`UPDATE_RULE` y `DELETE_RULE` = `RESTRICT`) y `db:table --json` (`on_update` y `on_delete` = `restrict`).
+- `SHOW CREATE TABLE` no escribe la cláusula porque `RESTRICT` es el valor por defecto.
+- Las migraciones usan `constrained()` sin `cascadeOnDelete()`: no hay borrado en cascada.
 
 ### A.3 Índices y restricciones únicas
+
+Fuente: `information_schema.STATISTICS` y `SHOW CREATE TABLE`.
 
 | Tabla | Índice | Columnas | Tipo | Para qué |
 |---|---|---|---|---|
@@ -91,24 +151,24 @@ No hay borrado en cascada en ninguna llave foránea. Fuente: las migraciones usa
 | `categorias` | `PRIMARY` | `id` | PK | — |
 | `categorias` | `categorias_nombre_unique` | `nombre` | UNIQUE | INV-05 |
 | `productos` | `PRIMARY` | `id` | PK | — |
-| `productos` | índice de la FK (`productos_categoria_id_foreign`) | `categoria_id` | INDEX (lo crea InnoDB para la FK) | Filtro por categoría y conteos. [VERIFICAR] V-04 |
+| `productos` | `productos_categoria_id_foreign` | `categoria_id` | KEY (índice de la FK) | Filtro por categoría y conteos |
 | `movimientos_inventario` | `PRIMARY` | `id` | PK | — |
-| `movimientos_inventario` | índice de la FK de `producto_id` | `producto_id` | INDEX (InnoDB) | Historial por producto. [VERIFICAR] V-04 |
-| `movimientos_inventario` | índice de la FK de `usuario_id` | `usuario_id` | INDEX (InnoDB) | [VERIFICAR] V-04 |
-| `movimientos_inventario` | `movimientos_inventario_fecha_index` | `fecha` | INDEX | Historial, "movimientos de hoy", reporte "Más movidos" (comentario en la migración `2026_10_11_120000`; `BaseDeDatosTest::test_los_movimientos_tienen_indice_por_fecha`) |
+| `movimientos_inventario` | `movimientos_inventario_producto_id_foreign` | `producto_id` | KEY (índice de la FK) | Historial por producto, conteos |
+| `movimientos_inventario` | `movimientos_inventario_usuario_id_foreign` | `usuario_id` | KEY (índice de la FK) | — |
+| `movimientos_inventario` | `movimientos_inventario_fecha_index` | `fecha` | KEY | Historial, "movimientos de hoy", reporte "Más movidos" (comentario de la migración `2026_10_11_120000`; `BaseDeDatosTest::test_los_movimientos_tienen_indice_por_fecha`) |
 
 ### A.4 Tablas de infraestructura (framework, sin clase de dominio)
 
 | Tabla | Columnas | ¿La usa la app? |
 |---|---|---|
-| `sessions` | `id VARCHAR(255)` PK · `user_id BIGINT UNSIGNED NULL` con INDEX, **sin** FK · `ip_address VARCHAR(45) NULL` · `user_agent TEXT NULL` · `payload LONGTEXT` · `last_activity INT` con INDEX | Sí, con `SESSION_DRIVER=database` (`.env.example:32`): se lee y se escribe en cada petición (`03` §0) |
-| `cache` | `key VARCHAR(255)` PK · `value MEDIUMTEXT` · `expiration INT` con INDEX | Sí, con `CACHE_STORE=database` (`.env.example:42`): contador de intentos del login (`RateLimiter`, UC-02) |
-| `cache_locks` | `key` PK · `owner VARCHAR(255)` · `expiration INT` con INDEX | No se observó uso |
-| `password_reset_tokens` | `email VARCHAR(255)` PK · `token VARCHAR(255)` · `created_at TIMESTAMP NULL` | **No** (RF-02 fuera de alcance, DIF-20) |
+| `sessions` | `id varchar(255)` PK · `user_id bigint(20) unsigned NULL` con KEY `sessions_user_id_index` (**sin** FK) · `ip_address varchar(45) NULL` · `user_agent text NULL` · `payload longtext` · `last_activity int(11)` con KEY `sessions_last_activity_index` | Sí, con `SESSION_DRIVER=database` (`.env.example:32`): se lee y se escribe en cada petición (`03` §0.5) |
+| `cache` | `key varchar(255)` PK · `value mediumtext` · `expiration int(11)` con KEY `cache_expiration_index` | Sí, con `CACHE_STORE=database` (`.env.example:42`): contador de intentos del login (`RateLimiter`, UC-02) |
+| `cache_locks` | `key` PK · `owner varchar(255)` · `expiration int` con índice (migración `0001_01_01_000001`) | No se observó uso |
+| `password_reset_tokens` | `email varchar(255)` PK · `token varchar(255)` · `created_at timestamp NULL` (migración `0001_01_01_000000`) | **No** (RF-02 fuera de alcance, DIF-20) |
 | `jobs`, `job_batches`, `failed_jobs` | Colas de Laravel (`0001_01_01_000002_create_jobs_table.php`) | **No**: la app no despacha trabajos |
 | `migrations` | Registro de migraciones de Laravel | Solo el framework |
 
-En el diagrama de clases de dominio se omiten estas tablas (ver D.6).
+Todas son InnoDB con `utf8mb4_unicode_ci`. En el diagrama de clases se omiten (§0 y D.6).
 
 ---
 
@@ -222,10 +282,10 @@ Fuentes: `app/Models/User.php:11-14`; `vendor/laravel/framework/src/Illuminate/F
 | `usuario()` | + | `: BelongsTo<User>` (FK `usuario_id`) | Usuario que lo registró | `:45-48` |
 | `registrar(Producto $producto, string $tipo, string\|int\|float $cantidad, User $usuario, ?Carbon $fecha = null): self` | + «static» | Ver los detalles debajo de la tabla | **Única** forma de cambiar `productos.stock_actual` (RN-04, RN-01, RN-10, RN-12) | `:64-108` |
 
-**Detalle de `registrar()`**
+**Detalle de `registrar()`** (en MariaDB, ver `03` §0.2)
 1. Comprueba que `tipo` sea `entrada` o `salida`; si no, lanza `InvalidArgumentException`.
-2. Abre `DB::transaction`.
-3. Vuelve a leer el producto con `lockForUpdate()`.
+2. Abre `DB::transaction`: `PDO::beginTransaction()`, o `SAVEPOINT trans2` si ya hay una transacción abierta.
+3. Vuelve a leer el producto con `lockForUpdate()` (``… limit 1 for update``).
 4. Valida:
    - Producto activo.
    - Cantidad mayor que 0.
@@ -263,8 +323,8 @@ Conviene dibujarlas como `«enumeration»` para que el diagrama sea legible. En 
 
 | Enumeración (nombre sugerido) | Literales | Dónde se define en realidad |
 |---|---|---|
-| `Rol` | `admin`, `encargado` | `ENUM` de `users.rol` (migración `2026_09_12_043713:15`); `User::ROLES` (etiquetas); `UsuarioRequest::rules:40` (`Rule::in`) |
-| `TipoMovimiento` | `entrada`, `salida` | `ENUM` de `movimientos_inventario.tipo`; `MovimientoRequest::rules:31`; `FiltrosHistorialRequest::rules:28`; `MovimientoInventario::registrar:66-68` |
+| `Rol` | `admin`, `encargado` | `enum('admin','encargado')` de `users.rol` (migración `2026_09_12_043713:15`); `User::ROLES` (etiquetas); `UsuarioRequest::rules:40` (`Rule::in`) |
+| `TipoMovimiento` | `entrada`, `salida` | `enum('entrada','salida')` de `movimientos_inventario.tipo`; `MovimientoRequest::rules:31`; `FiltrosHistorialRequest::rules:28`; `MovimientoInventario::registrar:66-68` |
 | `EstadoFiltroProducto` | `''` (Activos, por defecto), `stock-bajo`, `inactivos`, `todos` | `ProductoController::ESTADOS:25` (constante privada) |
 | `GrupoBusqueda` | `productos`, `categorias`, `usuarios` | `BusquedaController::__invoke:26` (`$permitidos`) |
 | `DestinoVolver` | `productos` → `productos.index`, `dashboard` → `dashboard` | `MovimientoController::VOLVER:19` |
@@ -273,9 +333,9 @@ Conviene dibujarlas como `«enumeration»` para que el diagrama sea legible. En 
 
 | ID | Origen | Destino | Tipo UML sugerido | Mult. en el origen | Mult. en el destino | Rol o nombre | Llave foránea | Navegabilidad en el código | Regla de borrado |
 |---|---|---|---|---|---|---|---|---|---|
-| R1 | `Categoria` | `Producto` | Asociación ("clasifica") | 1 | 0..* | `Categoria::productos()` ↔ `Producto::categoria()` | `productos.categoria_id` (NOT NULL) | Bidireccional | BD: RESTRICT. App: no se elimina si tiene productos (RN-15). Los productos nunca se eliminan |
-| R2 | `Producto` | `MovimientoInventario` | Asociación ("tiene"); se puede dibujar como composición conceptual (D.3) | 1 | 0..* | `Producto::movimientos()` ↔ `MovimientoInventario::producto()` | `movimientos_inventario.producto_id` (NOT NULL) | Bidireccional | BD: RESTRICT. App: los productos no se eliminan (RN-03) y los movimientos tampoco (RN-09) |
-| R3 | `User` | `MovimientoInventario` | Asociación ("registra") | 1 | 0..* | `MovimientoInventario::usuario()`; **no** existe `User::movimientos()` | `movimientos_inventario.usuario_id` (NOT NULL) | **Unidireccional**: `MovimientoInventario` → `User` | BD: RESTRICT. App: los usuarios no se eliminan (RN-03) |
+| R1 | `Categoria` | `Producto` | Asociación ("clasifica") | 1 | 0..* | `Categoria::productos()` ↔ `Producto::categoria()` | `productos.categoria_id` (NOT NULL) | Bidireccional | BD: `RESTRICT`. App: no se elimina si tiene productos (RN-15). Los productos nunca se eliminan |
+| R2 | `Producto` | `MovimientoInventario` | Asociación ("tiene"); se puede dibujar como composición conceptual (D.3) | 1 | 0..* | `Producto::movimientos()` ↔ `MovimientoInventario::producto()` | `movimientos_inventario.producto_id` (NOT NULL) | Bidireccional | BD: `RESTRICT`. App: los productos no se eliminan (RN-03) y los movimientos tampoco (RN-09) |
+| R3 | `User` | `MovimientoInventario` | Asociación ("registra") | 1 | 0..* | `MovimientoInventario::usuario()`; **no** existe `User::movimientos()` | `movimientos_inventario.usuario_id` (NOT NULL) | **Unidireccional**: `MovimientoInventario` → `User` | BD: `RESTRICT`. App: los usuarios no se eliminan (RN-03) |
 | R4 | `Producto` | `UnidadMedida` | Atributo tipado por enumeración (`unidad_medida: UnidadMedida`) | — | 1 | `unidad_medida` | — | `Producto` → `UnidadMedida` | — |
 | R5 | `MovimientoInventario` | `TipoMovimiento` | Atributo tipado por enumeración implícita | — | 1 | `tipo` | — | — | — |
 | R6 | `User` | `Rol` | Atributo tipado por enumeración implícita | — | 1 | `rol` | — | — | — |
@@ -409,16 +469,24 @@ Orden real: `00` §3.3.
 
 ## D. Notas para el modelador
 
-### D.1 Rol: atributo de `User` o subclases
+### D.1 Rol: un solo `User` con `rol` enum, o subclases
 
-**Así está el sistema:** **un** modelo `User` con el atributo `rol` (texto `admin` o `encargado`) y el método `esAdmin()`.
+**Así está el sistema:** **un solo** modelo `User` con el atributo `rol`, que es `enum('admin','encargado')` en la base, y el método `esAdmin()`.
 - Los permisos se deciden en el middleware `role` y en las vistas.
-- `docs/03` hace lo mismo: `rol` es un atributo `enum` de USERS. No tiene subclases (DIF-27, V-02).
+- No existe ninguna subclase de usuario en el código ni en la base (`app/Models/User.php`; migración `2026_09_12_043713:15`).
+
+**`docs/` tampoco tiene subclases:**
+- `docs/03` modela `rol` como atributo `enum` de USERS en su diagrama ER.
+- `docs/01` §2 define solo dos actores (Administrador y Encargado de inventario).
+
+**De dónde salen las subclases:** la jerarquía Cliente, Administrador y Repartidor viene del **análisis original de la materia**, que no está en el repositorio (aclaración del usuario; DIF-27, V-02).
+- **Cliente** y **Repartidor** no existen en el sistema: quedaron fuera de alcance (`docs/01` §9, DIF-01).
+- **Administrador** no es una clase, sino un **valor** del atributo `rol`.
 
 | Opción | Cómo se dibuja | Consecuencias |
 |---|---|---|
-| **A. Atributo (recomendada, fiel al código)** | `User` con `rol: Rol` («enumeration» Rol {admin, encargado}) y `+ esAdmin(): bool` | Ver los detalles debajo de la tabla |
-| B. Subclases | `Usuario` (abstracta) con las hijas `Administrador` y `EncargadoInventario` | Ver los detalles debajo de la tabla |
+| **A. Un solo `User` con `rol` enum (recomendada, fiel al código)** | `User` con `rol: Rol` («enumeration» Rol {admin, encargado}) y `+ esAdmin(): Boolean` | Ver los detalles debajo de la tabla |
+| B. Subclases, al estilo del análisis original | `Usuario` (abstracta) con las hijas `Administrador` y `EncargadoInventario`. Cliente y Repartidor **no** se dibujan: no existen | Ver los detalles debajo de la tabla |
 
 **Opción A en detalle**
 - Coincide con la tabla `users` y con `UsuarioController::update`, que cambia el rol con un simple `update`.
@@ -428,9 +496,9 @@ Orden real: `00` §3.3.
 **Opción B en detalle**
 - Muestra las diferencias de comportamiento, pero **no corresponde** a la implementación: hay una sola tabla y una sola clase, y el rol es **mutable**.
 - Con subclases, cambiar el rol obligaría a cambiar la clase del objeto, lo que UML no permite sin reclasificar.
-- Si se elige, hay que agregar la nota: "implementado como atributo `rol` en una sola tabla (*single table*)".
+- Si se elige, hay que agregar la nota: "implementado como un solo `User` con `rol` enum (*single table*)".
 
-Sugerencia: usar la generalización de actores **solo en el diagrama de casos de uso** y la opción A en el de clases.
+Sugerencia: usar la generalización de actores **solo en el diagrama de casos de uso** (`00` §3.2) y la opción A en el de clases.
 
 ### D.2 `stock_actual` y su regla de actualización
 
@@ -438,13 +506,13 @@ Sugerencia: usar la generalización de actores **solo en el diagrama de casos de
 - **Cómo dibujarlo:**
   - Atributo normal `stock_actual: Decimal {readOnly}`.
   - Restricción (OCL o nota): `{stock_actual = movimientos->select(tipo='entrada').cantidad->sum() - movimientos->select(tipo='salida').cantidad->sum()}` y `{stock_actual >= 0}`.
-  - Nota: "solo lo modifica `MovimientoInventario::registrar()`, dentro de una transacción con bloqueo de fila".
+  - Nota: "solo lo modifica `MovimientoInventario::registrar()`, dentro de una transacción con bloqueo de fila (`… for update`)".
 - **No conviene** la notación de derivado (`/stock_actual`). En UML, la barra indica que se calcula al consultarlo, y aquí está guardado en la tabla.
 - `{readOnly}` desde fuera es fiel a `$fillable`: no se puede asignar en masa. Ojo: sí cambia, pero solo por `increment` y `decrement` en `registrar()`.
 
 ### D.3 `Producto` – `MovimientoInventario`: asociación o composición
 
-- **Asociación 1 — 0..\* (recomendada):** refleja la llave foránea `RESTRICT` (no hay borrado en cascada) y que ni productos ni movimientos se eliminan.
+- **Asociación 1 — 0..\* (recomendada):** refleja la llave foránea `ON DELETE RESTRICT` (A.2) y que ni productos ni movimientos se eliminan.
 - **Composición (rombo negro en `Producto`):** se puede justificar en lo conceptual (un movimiento no existe sin su producto: `producto_id NOT NULL`). Pero en UML la composición implica que, al destruir el todo, se destruyen las partes, y el sistema impide destruir el producto. Si se usa, conviene anotarlo.
 - `Categoria` – `Producto` **no** es composición ni agregación fuerte: los productos se pueden cambiar de categoría (UC-10) y la categoría no se borra mientras tenga productos.
 
@@ -467,7 +535,9 @@ Sugerencia: usar la generalización de actores **solo en el diagrama de casos de
 | `UnidadMedida` (enum PHP) | «enumeration» `UnidadMedida` |
 | `BelongsTo` / `HasMany` | Extremos de asociación (no se dibujan como atributos) |
 
-### D.6 Qué conviene omitir en cada diagrama
+### D.6 Qué conviene omitir
+
+La lista por vista y por clase está en §0. En general:
 
 | Omitir | Por qué |
 |---|---|
@@ -480,19 +550,14 @@ Sugerencia: usar la generalización de actores **solo en el diagrama de casos de
 
 ### D.7 Tres vistas sugeridas
 
-1. **Vista de dominio:**
-   - Clases: `User`, `Categoria`, `Producto` y `MovimientoInventario`, con atributos, `$fillable` como nota si se quiere, y métodos de B.1 a B.4.
-   - Relaciones: R1, R2 y R3 con multiplicidades y nombres de rol.
-   - Restricciones: `{stock_actual = Σ…}` y `{inmutable}`.
-   - Los tipos `UnidadMedida`, `Rol` y `TipoMovimiento` como referencia.
+Qué atributos y métodos poner en cada clase: §0.
+
+1. **Vista de dominio:** `User`, `Categoria`, `Producto` y `MovimientoInventario`, con las relaciones R1, R2 y R3 y las restricciones `{stock_actual = Σ…}` e `{inmutable}`. `UnidadMedida`, `Rol` y `TipoMovimiento` van como referencias.
 2. **Vista de aplicación:**
    - Los 9 controladores, los 6 Form Requests y los 2 middleware propios (`UsuarioActivo`, `VerificarRol`).
-   - Dependencias `«use»` hacia las clases del dominio (C.5).
+   - Dependencias `«use»` hacia el dominio (C.5).
    - Herencia de `Controller` y `FormRequest`.
-   - Opcionalmente, notas con las rutas (`productos.store`, …) junto a cada método.
-3. **Vista de enumeraciones:**
-   - `UnidadMedida` (con sus 7 literales y sus métodos).
-   - Las implícitas `Rol`, `TipoMovimiento`, `EstadoFiltroProducto`, `GrupoBusqueda` y `DestinoVolver` (B.6), marcadas como "implícitas (no son clases PHP)".
+3. **Vista de enumeraciones:** `UnidadMedida` (sus 7 literales y sus métodos), y las implícitas `Rol` y `TipoMovimiento`. Las demás implícitas de B.6 son opcionales.
 
 ### D.8 Nombres que pueden confundir
 
