@@ -260,12 +260,17 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-[data-icosaedro] line {
+[data-icosaedro] line,
+[data-icosaedro] path {
+    fill: none;
     stroke-width: 1.5;
     stroke-linecap: round;
+    stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
 }
 
+/* Los dos SVG estáticos y el lienzo del 3D, uno encima del otro dentro del tamaño reservado */
+[data-icosaedro] svg,
 [data-icosaedro] canvas {
     position: absolute;
     inset: 0;
@@ -273,7 +278,34 @@
     height: 100%;
 }
 
-/* Con el 3D listo, el SVG estático se oculta (sigue ocupando su lugar: nada se mueve) */
+/*
+ * SVG estático: el icosaedro se ve mientras carga el 3D; el huevo es el estado final con
+ * "reducir movimiento", sin WebGL o si Three.js no cargó (y entonces se funde desde el icosaedro).
+ */
+[data-icosaedro] svg {
+    transition: opacity 0.6s var(--ease-asentar);
+}
+
+[data-icosaedro] [data-forma="huevo"],
+[data-icosaedro]:is([data-modo="sin-webgl"], [data-modo="error"]) [data-forma="icosaedro"] {
+    opacity: 0;
+}
+
+[data-icosaedro]:is([data-modo="sin-webgl"], [data-modo="error"]) [data-forma="huevo"] {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-icosaedro] [data-forma="icosaedro"] {
+        opacity: 0;
+    }
+
+    [data-icosaedro] [data-forma="huevo"] {
+        opacity: 1;
+    }
+}
+
+/* Con el 3D listo, los SVG estáticos se ocultan (siguen ocupando su lugar: nada se mueve) */
 [data-icosaedro][data-webgl] svg {
     visibility: hidden;
 }

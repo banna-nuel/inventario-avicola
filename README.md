@@ -18,7 +18,7 @@ Hecho con **Laravel 12**, **Blade**, **Tailwind CSS v4 (CLI standalone, sin Node
 | Reportes (en pantalla, imprimibles) | Sí | No (403) |
 
 - **Inicio:** accesos a los módulos según el rol y un aviso de cuántos productos están en stock bajo.
-- **Icosaedro 3D** (RNF-08) en Inicio y en el login: gira solo, sigue al cursor y reacciona al scroll, al click y al arrastre táctil. Es decorativo y respeta "reducir movimiento".
+- **Icosaedro 3D que se transforma en huevo** (RNF-08) en Inicio y en el login: aparece como icosaedro y a los 1,2 s se vuelve huevo; el click alterna entre las dos formas. Gira solo, sigue al cursor y reacciona al scroll, al click y al arrastre táctil. Es decorativo y respeta "reducir movimiento" (queda un huevo estático). Ver [Icosaedro → huevo](#icosaedro--huevo-rnf-08).
 - **Dashboard:** productos activos, activos en stock bajo, movimientos de hoy (día calendario en hora de Bogotá) y la lista de alertas ordenada por mayor faltante, con acceso directo para registrar una entrada.
 - **Buscar:** mínimo 2 caracteres, resultados agrupados (10 por grupo) con "Ver todos".
 - **Historial:** filtros por producto, tipo y rango de fechas (inclusivo), paginado.
@@ -145,7 +145,37 @@ Three.js no se instala con npm ni se carga desde un CDN: sus archivos están en 
 
 3. Actualiza `public/js/vendor/THIRD_PARTY.md`: versión, URLs, fecha, tamaño y SHA-256 de cada archivo (y la licencia, si cambió).
 4. Corre `php artisan test`: `IcosaedroTest` falla si los SHA-256 de `THIRD_PARTY.md` no coinciden con los archivos.
-5. Abre Inicio y el login y revisa que el icosaedro gire y que la consola del navegador no tenga errores.
+5. Abre Inicio y el login y revisa que el icosaedro gire, que se transforme en huevo y que la consola del navegador no tenga errores.
+
+---
+
+## Icosaedro → huevo (RNF-08)
+
+El componente `x-icosaedro` aparece como icosaedro (30 aristas) y, a los ~1,2 s, se transforma en un huevo en ~1,4 s con la curva `cubic-bezier(.22, 1, .36, 1)` (`--ease-asentar`). Se queda como huevo; cada click alterna entre las dos formas (~1 s) y además le da el impulso de siempre.
+
+**Fórmula de deformación** (la misma en `public/js/icosaedro.js` y en `app/View/Components/Icosaedro.php`; `IcosaedroTest` comprueba que coincidan). Cada punto (x, y, z) de la esfera de radio 1 va a:
+
+```text
+x' = 0,82 · x · (1 − 0,2 · y)
+y' = 0,82 · 1,32 · y
+z' = 0,82 · z · (1 − 0,2 · y)
+```
+
+- `0,2` (asimetría, k): ensancha la mitad de abajo y afina la de arriba. El extremo ancho queda abajo.
+- `1,32` (alargamiento): da la proporción alto:ancho ≈ 1,3:1 en pantalla (medida: 1,31).
+- `0,82` (escala): el huevo ocupa en pantalla lo mismo que el icosaedro.
+- El punto de partida fue `x·(1 − 0,15·y)`, `y' = 1,25·y`. Se afinó a ojo: con esos valores el huevo quedaba 1,24:1, y con k = 0,2 el extremo angosto se nota más.
+
+**Cómo se transforma:**
+- Cada arista se parte en tramos (16 en el 3D, 8 en el SVG).
+- Cada punto tiene dos lugares: sobre la arista recta (icosaedro) y el mismo punto llevado a la esfera y deformado (huevo). La transformación interpola entre los dos, así que hay correspondencia uno a uno y el icosaedro inicial no tiene líneas extra.
+- Con solo los 30 arcos la silueta se veía abollada. Por eso, al final de la transformación (del 80 % al 100 %) aparece con un fundido el **contorno del huevo visto desde la cámara**: los puntos donde la visual roza la superficie, calculados con la misma cuenta en PHP y en JS.
+- El huevo gira solo alrededor de su eje vertical, con una inclinación fija de 0,2 rad (se ve un poco desde arriba) para no volcarse. La inclinación hacia el cursor queda limitada a ±15°.
+
+**Estados estáticos (SVG calculado en PHP):**
+- El icosaedro se ve mientras carga el 3D, así que no hay salto.
+- El huevo es el estado final con "reducir movimiento" o sin WebGL. En esos casos no se descarga Three.js.
+- Los dos SVG están uno encima del otro dentro del tamaño reservado, así que nada se mueve.
 
 ---
 
@@ -166,9 +196,9 @@ resources/css/input.css            Tokens del diseño (@theme), transiciones y e
 resources/views/components/        Componentes Blade: boton, campo, select, hoja, tabla, badge, alerta...
 resources/views/{modulo}/          Vistas de cada módulo; create/edit son "hojas" sobre el listado
 public/js/app.js                   JavaScript vanilla (hoja accesible, filtros, resumen de stock, imprimir)
-public/js/icosaedro.js             Icosaedro 3D (módulo ES; carga Three.js solo cuando hace falta)
+public/js/icosaedro.js             Icosaedro 3D que se transforma en huevo (módulo ES; carga Three.js solo cuando hace falta)
 public/js/vendor/                  Three.js autoalojado + THIRD_PARTY.md (versión, origen, SHA-256 y licencia)
-app/View/Components/Icosaedro.php  Componente x-icosaedro (calcula el SVG estático de respaldo)
+app/View/Components/Icosaedro.php  Componente x-icosaedro (calcula los SVG estáticos: icosaedro y huevo)
 tests/Feature/                     Pruebas de cada fase
 docs/                              Requerimientos, casos de uso, modelo de datos y arquitectura
 ```
@@ -233,7 +263,7 @@ No existen a propósito (responden 404 o 405): ver un recurso (`show`), eliminar
 - **Búsqueda con LIKE escapado:** "50%" o "a_b" se buscan como texto, no como comodines.
 - **Transiciones entre páginas** con View Transitions de CSS, solo si la persona no pidió "reducir movimiento". En navegadores sin soporte (como Firefox) se navega normal.
 - **Reportes en pantalla e imprimibles:** sin exportar a PDF o Excel en la v1.
-- **Three.js autoalojado y cargado tarde:** sin CDN ni scripts externos o inline (permite una CSP estricta). Se descarga después de que la página cargó y solo si el icosaedro está a la vista; sin WebGL o con "reducir movimiento" queda un SVG estático.
+- **Three.js autoalojado y cargado tarde:** sin CDN ni scripts externos o inline (permite una CSP estricta). Se descarga después de que la página cargó y solo si el icosaedro está a la vista; sin WebGL o con "reducir movimiento" queda un huevo estático en SVG.
 
 ---
 

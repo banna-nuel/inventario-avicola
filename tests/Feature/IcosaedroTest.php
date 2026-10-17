@@ -3,16 +3,72 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\View\Components\Icosaedro;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use ReflectionClass;
 use Tests\TestCase;
 
-// Fase 10: icosaedro 3D (RNF-08) con Three.js autoalojado y sin scripts externos
+// Fase 10: icosaedro 3D que se transforma en huevo (RNF-08), con Three.js autoalojado y sin scripts externos
 class IcosaedroTest extends TestCase
 {
     use RefreshDatabase;
 
     private const VENDOR = ['three.module.js', 'three.core.js'];
+
+    // SHA-256 de las 30 <line> del icosaedro estático tal como quedó en la Fase 10 (commit b1cf288)
+    private const HASH_ICOSAEDRO = 'da10a3b4cadd9bdacc98e6cdaca22fa33cb47c5f3cae5265ad99d0bdcaf4f771';
+
+    public function test_el_svg_del_icosaedro_no_cambio(): void
+    {
+        $html = $this->get(route('login'))->assertOk()->getContent();
+
+        preg_match('/<svg[^>]*data-forma="icosaedro"[^>]*>(.*?)<\/svg>/s', $html, $svg);
+        preg_match_all('/<line [^>]*\/>/', $svg[1], $lineas);
+
+        $this->assertCount(30, $lineas[0]);
+        $this->assertSame(self::HASH_ICOSAEDRO, hash('sha256', implode("\n", $lineas[0])));
+    }
+
+    public function test_el_svg_del_huevo_es_asimetrico_y_tiene_la_proporcion_esperada(): void
+    {
+        $html = $this->get(route('login'))->assertOk()->getContent();
+
+        preg_match('/<svg[^>]*data-forma="huevo"[^>]*>(.*?)<\/svg>/s', $html, $svg);
+        $this->assertSame(31, substr_count($svg[1], '<path '));   // 30 arcos + el contorno
+
+        // Puntos del contorno ("Mx yLx y...Z") en el viewBox; en SVG la Y crece hacia abajo
+        preg_match('/<path d="([^"]+)"[^>]*data-silueta/', $svg[1], $silueta);
+        preg_match_all('/(-?[\d.]+) (-?[\d.]+)/', $silueta[1], $pares, PREG_SET_ORDER);
+        $puntos = array_map(fn ($par) => [(float) $par[1], (float) $par[2]], $pares);
+
+        $xs = array_column($puntos, 0);
+        [$arriba, $abajo] = [min(array_column($puntos, 1)), max(array_column($puntos, 1))];
+        $proporcion = ($abajo - $arriba) / (max($xs) - min($xs));
+        $this->assertEqualsWithDelta(1.3, $proporcion, 0.05, "alto:ancho = {$proporcion}");
+
+        // Asimétrico: más ancho a 3/4 de la altura (cerca de la base) que a 1/4 (cerca de la punta)
+        $anchoArriba = $this->anchoDelContorno($puntos, $arriba + ($abajo - $arriba) * 0.25);
+        $anchoAbajo = $this->anchoDelContorno($puntos, $arriba + ($abajo - $arriba) * 0.75);
+        $this->assertGreaterThan(1.1, $anchoAbajo / $anchoArriba, 'El extremo ancho tiene que ir abajo');
+    }
+
+    public function test_el_3d_y_el_svg_usan_la_misma_deformacion(): void
+    {
+        $modulo = file_get_contents(public_path('js/icosaedro.js'));
+        $clase = new ReflectionClass(Icosaedro::class);
+        $constantes = [
+            'asimetria' => 'HUEVO_ASIMETRIA',
+            'alargamiento' => 'HUEVO_ALARGAMIENTO',
+            'escala' => 'HUEVO_ESCALA',
+            'inclinacion' => 'HUEVO_INCLINACION',
+        ];
+
+        foreach ($constantes as $js => $php) {
+            $valor = (string) $clase->getConstant($php);
+            $this->assertMatchesRegularExpression('/\b'.$js.': '.preg_quote($valor, '/').',/', $modulo, "{$js} ≠ {$php} ({$valor})");
+        }
+    }
 
     public function test_inicio_y_login_cargan_el_modulo_del_mismo_origen(): void
     {
@@ -103,5 +159,19 @@ class IcosaedroTest extends TestCase
                 $this->assertStringStartsWith(url('/'), $fuente, "Script externo en {$url}");
             }
         }
+    }
+
+    // Ancho del contorno cerrado a la altura $y: distancia entre sus cruces con esa horizontal
+    private function anchoDelContorno(array $puntos, float $y): float
+    {
+        $cruces = [];
+        foreach ($puntos as $i => [$x1, $y1]) {
+            [$x2, $y2] = $puntos[($i + 1) % count($puntos)];
+            if (($y1 - $y) * ($y2 - $y) <= 0 && $y1 != $y2) {
+                $cruces[] = $x1 + ($x2 - $x1) * ($y - $y1) / ($y2 - $y1);
+            }
+        }
+
+        return max($cruces) - min($cruces);
     }
 }
