@@ -81,8 +81,9 @@ services:
             context: .
             target: runtime
         image: inventario-avicola/app:local
-        # Variables de Laravel (APP_KEY, credenciales...): .env.docker, que no va a Git
-        env_file: .env.docker
+        # Variables de Laravel (APP_KEY, credenciales de la base...). Cada servicio recibe solo
+        # las suyas: .env.docker.app (no va a Git; lo crea scripts/docker-init.ps1)
+        env_file: .env.docker.app
         # Solo la red interna: app no puede salir a internet ni recibir conexiones desde fuera
         networks: [internal]
         # Escritura permitida solo aquí:
@@ -114,8 +115,9 @@ services:
         user: "999:999"
         # X Plugin (puerto 33060) apagado: la app no lo usa y es una puerta menos
         command: ["--mysqlx=OFF"]
-        # MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD y MYSQL_RANDOM_ROOT_PASSWORD (.env.docker)
-        env_file: .env.docker
+        # Solo MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD y MYSQL_RANDOM_ROOT_PASSWORD:
+        # .env.docker.db (no va a Git). MySQL no recibe APP_KEY ni nada de Laravel.
+        env_file: .env.docker.db
         # Sin "ports": MySQL no se publica. Solo app lo alcanza, por la red interna.
         networks: [internal]
         volumes:

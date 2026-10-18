@@ -29,8 +29,10 @@ public/css/app.css
 /docs/capturas
 /.playwright-mcp
 
-# Secretos de la pila Docker (la plantilla versionada es .env.docker.example)
+# Secretos de la pila Docker, uno por servicio (las plantillas versionadas son los .example)
 /.env.docker
+/.env.docker.app
+/.env.docker.db
 
 # Copias locales de la documentación (la ubicación canónica es docs/01 a 04) y sus zip
 docs/info/
