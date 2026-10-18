@@ -1,0 +1,221 @@
+# Pila Docker de Inventario Avícola (Fase 11). Guía para principiantes: docs/docker.md
+#
+# Docker Compose levanta varios contenedores que trabajan juntos. Cada "servicio" es un contenedor:
+#   web  nginx: recibe al navegador en http://127.0.0.1:8080, sirve public/ y pasa PHP a app
+#   app  PHP-FPM con Laravel (la app)
+#   db   MySQL 8.4 con los datos (en un volumen: sobreviven a apagar y prender)
+#
+# Uso básico (desde la carpeta del proyecto):
+#   docker compose up -d --build                             construir y levantar
+#   docker compose exec app php artisan migrate --seed --force   crear tablas y datos de demo
+#   docker compose down                                      apagar (los datos se conservan)
+#
+# Esto es adicional al flujo con XAMPP y php artisan serve: no publica el puerto de MySQL
+# y usa el 8080, así que no choca con XAMPP (80/443/3306) ni con artisan serve (8000).
+
+name: inventario-avicola
+
+# Protecciones comunes a todos los servicios (se aplican con "<<: *endurecido"):
+x-endurecido: &endurecido
+    # El disco del contenedor es de solo lectura: si alguien lograra ejecutar código, no podría
+    # modificar programas ni configuración. Solo se escribe donde hay tmpfs o volúmenes.
+    read_only: true
+    # Las "capabilities" son permisos especiales de Linux (cambiar dueños, abrir puertos bajos...).
+    # Se quitan todas y no se agrega ninguna: ningún servicio corre como root, así que no las
+    # necesita (ver docs/docker.md).
+    cap_drop: [ALL]
+    # Un proceso no puede ganar más permisos de los que tiene (por ejemplo con programas setuid)
+    security_opt: ["no-new-privileges:true"]
+    # Si un contenedor se cae, Docker lo vuelve a levantar (salvo que lo apagues tú)
+    restart: unless-stopped
+    # Los logs van a la salida estándar (docker compose logs); se rotan para no llenar el disco
+    logging:
+        driver: json-file
+        options:
+            max-size: "10m"
+            max-file: "3"
+
+services:
+    # --------------------------------------------------------------------------------------
+    # web: nginx sin privilegios (Dockerfile, etapa "web")
+    # --------------------------------------------------------------------------------------
+    web:
+        <<: *endurecido
+        build:
+            context: .
+            target: web
+        image: inventario-avicola/web:local
+        # Único puerto publicado, y solo en 127.0.0.1: se abre desde este equipo, no desde la red
+        ports:
+            - "127.0.0.1:8080:8080"
+        # edge: la red publicada · internal: para hablar con app (y nada más)
+        networks: [edge, internal]
+        # nginx necesita escribir solo archivos temporales y su pid (en memoria)
+        tmpfs:
+            - /tmp:mode=1777,size=32m
+        depends_on:
+            app:
+                condition: service_started
+        # Sano = /up responde 200 pasando por nginx, php-fpm y Laravel
+        healthcheck:
+            test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/up"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 20s
+            start_interval: 2s
+        # Límites: CPU, memoria y cantidad de procesos (un error o un abuso no se come el equipo)
+        deploy:
+            resources:
+                limits:
+                    cpus: "0.50"
+                    memory: 128M
+                    pids: 64
+
+    # --------------------------------------------------------------------------------------
+    # app: PHP-FPM con Laravel (Dockerfile, etapa "runtime"), usuario www-data
+    # --------------------------------------------------------------------------------------
+    app:
+        <<: *endurecido
+        build:
+            context: .
+            target: runtime
+        image: inventario-avicola/app:local
+        # Variables de Laravel (APP_KEY, credenciales...): .env.docker, que no va a Git
+        env_file: .env.docker
+        # Solo la red interna: app no puede salir a internet ni recibir conexiones desde fuera
+        networks: [internal]
+        # Escritura permitida solo aquí:
+        #   /tmp y /run: temporales en memoria (incluye la caché de configuración)
+        #   storage: volumen con lo que Laravel guarda (vistas compiladas, archivos)
+        tmpfs:
+            - /tmp:mode=1777,size=64m
+            - /run:mode=755,size=8m
+        volumes:
+            - storage:/var/www/html/storage
+        depends_on:
+            db:
+                condition: service_healthy
+        deploy:
+            resources:
+                limits:
+                    cpus: "1.0"
+                    memory: 512M
+                    pids: 128
+
+    # --------------------------------------------------------------------------------------
+    # db: MySQL 8.4 LTS
+    # --------------------------------------------------------------------------------------
+    db:
+        <<: *endurecido
+        image: mysql:8.4.11@sha256:24989179f58856db763f418010c1169fecc944e3ec1ea7e921572d83eb070f70
+        # Corre como el usuario mysql (uid 999) desde el principio: la imagen no necesita root
+        # para cambiar dueños ni para bajar de usuario, así que no hace falta ninguna capability
+        user: "999:999"
+        # X Plugin (puerto 33060) apagado: la app no lo usa y es una puerta menos
+        command: ["--mysqlx=OFF"]
+        # MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD y MYSQL_RANDOM_ROOT_PASSWORD (.env.docker)
+        env_file: .env.docker
+        # Sin "ports": MySQL no se publica. Solo app lo alcanza, por la red interna.
+        networks: [internal]
+        volumes:
+            - mysql-datos:/var/lib/mysql
+        # Socket, pid y temporales de MySQL, en memoria y del usuario mysql
+        tmpfs:
+            - /var/run/mysqld:uid=999,gid=999,mode=0755,size=8m
+            - /tmp:mode=1777,size=64m
+        # Sano = el servidor definitivo responde por TCP (el temporal de la primera
+        # inicialización no abre el puerto). mysqladmin ping no necesita contraseña.
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+            start_period: 60s
+            start_interval: 2s
+        # MySQL guarda en disco al apagarse: más tiempo que los 10 s por defecto
+        stop_grace_period: 30s
+        deploy:
+            resources:
+                limits:
+                    cpus: "1.0"
+                    memory: 1G
+                    pids: 256
+
+    # --------------------------------------------------------------------------------------
+    # Perfil "test" (apagado: solo corre con --profile test). Corre MovimientoTest contra un
+    # MySQL 8.4 real para confirmar el bloqueo "for update" y los SAVEPOINT (con SQLite se omite).
+    #   docker compose --profile test run --rm pruebas
+    #   docker compose --profile test down
+    # La base de pruebas vive en memoria (tmpfs): se borra sola al apagarla.
+    # --------------------------------------------------------------------------------------
+    db-test:
+        <<: *endurecido
+        profiles: [test]
+        image: mysql:8.4.11@sha256:24989179f58856db763f418010c1169fecc944e3ec1ea7e921572d83eb070f70
+        user: "999:999"
+        command: ["--mysqlx=OFF"]
+        restart: "no"
+        # Credenciales de una base desechable, solo para pruebas (no son secretos)
+        environment:
+            MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+            MYSQL_DATABASE: inventario_avicola_test
+            MYSQL_USER: pruebas
+            MYSQL_PASSWORD: pruebas
+        networks: [internal]
+        tmpfs:
+            - /var/lib/mysql:uid=999,gid=999,mode=0750,size=512m
+            - /var/run/mysqld:uid=999,gid=999,mode=0755,size=8m
+            - /tmp:mode=1777,size=64m
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+            interval: 5s
+            timeout: 5s
+            retries: 30
+            start_period: 60s
+            start_interval: 2s
+        deploy:
+            resources:
+                limits:
+                    cpus: "1.0"
+                    memory: 1G
+
+    pruebas:
+        profiles: [test]
+        build:
+            context: .
+            target: test
+        image: inventario-avicola/test:local
+        command: ["php", "artisan", "test", "--filter=MovimientoTest"]
+        # Pisan los valores de SQLite de phpunit.xml (las variables reales tienen prioridad)
+        environment:
+            DB_CONNECTION: mysql
+            DB_HOST: db-test
+            DB_PORT: "3306"
+            DB_DATABASE: inventario_avicola_test
+            DB_USERNAME: pruebas
+            DB_PASSWORD: pruebas
+        networks: [internal]
+        depends_on:
+            db-test:
+                condition: service_healthy
+        cap_drop: [ALL]
+        security_opt: ["no-new-privileges:true"]
+        deploy:
+            resources:
+                limits:
+                    cpus: "1.0"
+                    memory: 512M
+
+networks:
+    # Red con salida al equipo: solo la usa web (para publicar el 8080)
+    edge: {}
+    # Red aislada: sin salida a internet ni entrada desde fuera; web, app y db se hablan aquí
+    internal:
+        internal: true
+
+volumes:
+    # Los datos de MySQL. Sobreviven a "docker compose down"; se borran solo con "down -v".
+    mysql-datos: {}
+    # storage/ de Laravel (vistas compiladas y archivos)
+    storage: {}
