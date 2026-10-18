@@ -2,21 +2,107 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    <title>@yield('title')</title>
+    @include('layouts.partes.head')
 </head>
 
-<body>
-    @yield('content')
-    <footer>
-        <nav>
-            <a href="/home">home</a>
-            <a href="/dashboard">dashboard</a>
-            <a href="/search">search</a>
-        </nav>
-    </footer>
+{{-- Con una hoja abierta, el fondo no hace scroll --}}
+<body class="min-h-dvh @hasSection('hoja') overflow-hidden @endif">
+    {{-- Con una hoja abierta el contenido está inerte, así que este enlace no se muestra --}}
+    @sectionMissing('hoja')
+        <a href="#contenido"
+            class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-tinta focus:px-4 focus:py-2 focus:text-superficie">
+            Saltar al contenido
+        </a>
+    @endif
+
+    {{--
+        Encabezado (TopBar del Figma): zona segura de 56 px arriba y una barra de 64 px
+        con el logotipo a 16 px. A los lados: volver (opcional) y cerrar sesión.
+    --}}
+    <header class="vt-encabezado w-full px-5 pt-[max(env(safe-area-inset-top),56px)]" @hasSection('hoja') inert @endif>
+        <div class="flex h-16 items-start justify-between pt-4">
+            {{-- print:invisible: los controles no salen en la hoja impresa (reportes) --}}
+            <div class="-mt-1.5 size-10 print:invisible">
+                @hasSection('volver')
+                    <a href="@yield('volver')" aria-label="Volver" title="Volver"
+                        class="flex size-10 items-center justify-center rounded-full transition hover:bg-superficie">
+                        <x-icono nombre="flecha-izquierda" />
+                    </a>
+                @endif
+            </div>
+
+            <a href="{{ route('home') }}" class="font-display text-xl leading-7 tracking-titulo whitespace-nowrap">Inventario Avícola</a>
+
+            <form action="{{ route('logout') }}" method="POST" class="-mt-1.5 size-10 print:invisible">
+                @csrf
+                <button type="submit" aria-label="Cerrar sesión" title="Cerrar sesión"
+                    class="flex size-10 items-center justify-center rounded-full transition hover:bg-superficie">
+                    <x-icono nombre="salir" />
+                </button>
+            </form>
+        </div>
+    </header>
+
+    {{-- Contenido a todo el ancho con márgenes de 20 px, como en el Figma; 128 px abajo para no quedar bajo la barra --}}
+    {{-- Con una hoja abierta, lo de atrás queda inerte (sin foco ni clics) --}}
+    <main id="contenido" class="vt-contenido w-full px-5 pb-32" @hasSection('hoja') inert @endif>
+        {{-- Mensajes flash: los controladores usan ->with('success', ...) o ->with('error', ...) --}}
+        @if (session('success'))
+            <x-alerta tipo="exito" class="mt-2 print:hidden">{{ session('success') }}</x-alerta>
+        @endif
+        @if (session('error'))
+            <x-alerta tipo="error" class="mt-2 print:hidden">{{ session('error') }}</x-alerta>
+        @endif
+        {{-- Alerta de stock bajo al registrar un movimiento (MovimientoController) --}}
+        @if (session('aviso'))
+            <x-alerta tipo="aviso" class="mt-2 print:hidden">{{ session('aviso') }}</x-alerta>
+        @endif
+
+        @yield('content')
+    </main>
+
+    {{-- Hoja de formulario (crear/editar), encima del listado: ver components/hoja.blade.php --}}
+    @yield('hoja')
+
+    {{-- Navegación flotante tipo píldora (BottomNav del Figma) --}}
+    @php
+        // Enlaces de la barra (config/navegacion.php)
+        $enlaces = auth()->user()->enlaces('barra');
+        // Posición del ítem activo (0, 1 o 2); false si la página no está en la barra
+        $indiceActivo = collect($enlaces)->search(fn ($enlace) => request()->routeIs($enlace['ruta']));
+    @endphp
+    {{-- Con una hoja abierta, la barra se sigue viendo pero queda inerte (la hoja es modal) --}}
+    <nav aria-label="Navegación principal" @hasSection('hoja') inert @endif
+        class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2.5 pb-[max(34px,env(safe-area-inset-bottom))] print:hidden">
+        <div class="vt-barra pointer-events-auto relative rounded-full bg-tinta/60 p-2 shadow-nav backdrop-blur-lg">
+            @if ($indiceActivo !== false)
+                {{--
+                    Círculo negro del ítem activo. Es un solo elemento que se corre 74 px por posición
+                    (50 px de botón + 24 px de separación). Como se llama igual en todas las páginas
+                    (vt-nav-activo), al navegar se desliza hasta el ítem nuevo.
+                --}}
+                <span class="vt-nav-activo pointer-events-none absolute top-2 left-2 size-[50px] rounded-full bg-tinta"
+                    style="transform: translateX({{ $indiceActivo * 74 }}px)" aria-hidden="true">
+                    {{-- Acento naranja mínimo del ítem activo --}}
+                    <span class="absolute bottom-2 left-1/2 size-1 -translate-x-1/2 rounded-full bg-acento"></span>
+                </span>
+            @endif
+
+            <ul class="flex items-center gap-6">
+                @foreach ($enlaces as $indice => $enlace)
+                    @php $activo = $indice === $indiceActivo; @endphp
+                    <li>
+                        <a href="{{ route($enlace['ruta']) }}" aria-label="{{ $enlace['etiqueta'] }}" title="{{ $enlace['etiqueta'] }}"
+                            @if ($activo) aria-current="page" @endif
+                            class="relative z-10 flex size-[50px] items-center justify-center rounded-full text-superficie transition active:scale-90 {{ $activo ? '' : 'hover:bg-superficie/15' }}">
+                            {{-- vt-icono-home, vt-icono-dashboard... (ver resources/css/input.css) --}}
+                            <x-icono :nombre="$enlace['icono']" :class="'vt-icono-' . $enlace['ruta']" />
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    </nav>
 </body>
 
 </html>

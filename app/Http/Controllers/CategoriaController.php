@@ -2,65 +2,77 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\CategoriaRequest;
 use App\Models\Categoria;
+use Illuminate\Http\Request;
 
+/**
+ * CRUD de categorías (solo administrador, ver routes/web.php).
+ * Crear y editar se muestran como una hoja encima del listado, por eso
+ * create() y edit() también envían el listado a la vista.
+ */
 class CategoriaController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    // ?q= llega desde "Ver todos" en Search: filtra por nombre
+    public function index(Request $request)
     {
-        $categorias = Categoria::all();
-        return view('categorias.index', compact('categorias'));
+        $q = is_string($request->query('q')) ? trim($request->query('q')) : '';
+
+        return view('categorias.index', ['categorias' => $this->listado($q), 'q' => $q]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        return view('categorias.create');
+        return view('categorias.create', ['categorias' => $this->listado()]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function store(CategoriaRequest $request)
     {
-        $nombreValidacion = $request->validate([
-            'nombre' => 'required|string|max:100|unique:categorias,nombre'
-        ]);
-        Categoria::create($nombreValidacion);
-        return redirect('/categorias')->with('success', 'Categoría creada');
+        $categoria = Categoria::create($request->validated());
+
+        return redirect()->route('categorias.index')
+            ->with('success', "Categoría «{$categoria->nombre}» creada.");
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Categoria $categoria)
     {
-        return view(categorias.edit)
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Categoria $categoria)
-    {
-        $nombreValidacion = $request->validate([
-            'nombre' => 'required|string|max:100|unique:categorias,nombre,' . $categoria->id
+        return view('categorias.edit', [
+            'categorias' => $this->listado(),
+            'categoria' => $categoria,
         ]);
-        Categoria::create($nombreValidacion);
-        return redirect('/categorias')->with('success', 'Categoría creada');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+    public function update(CategoriaRequest $request, Categoria $categoria)
+    {
+        $categoria->update($request->validated());
+
+        return redirect()->route('categorias.index')
+            ->with('success', "Categoría «{$categoria->nombre}» actualizada.");
+    }
+
     public function destroy(Categoria $categoria)
     {
-        //
+        // RN-03: una categoría con productos (activos o no) no se puede eliminar
+        $productos = $categoria->productos()->count();
+
+        if ($productos > 0) {
+            return redirect()->route('categorias.index')
+                ->with('error', "No se puede eliminar «{$categoria->nombre}» porque tiene {$productos} "
+                    .($productos === 1 ? 'producto' : 'productos').'. Primero cámbialos de categoría.');
+        }
+
+        $categoria->delete();
+
+        return redirect()->route('categorias.index')
+            ->with('success', "Categoría «{$categoria->nombre}» eliminada.");
+    }
+
+    // Categorías en orden alfabético con su número de productos (una sola consulta, sin N+1)
+    private function listado(string $q = '')
+    {
+        return Categoria::withCount('productos')
+            ->when($q !== '', fn ($consulta) => $consulta->whereContiene('nombre', $q))
+            ->orderBy('nombre')
+            ->get();
     }
 }

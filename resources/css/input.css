@@ -1,1 +1,356 @@
 @import "tailwindcss";
+
+/*
+ * Sistema de diseño de Inventario Avícola.
+ * Fuente de verdad: el Figma Make "Collections App" (tema claro, monocromático).
+ * Usa siempre estos tokens por nombre (bg-fondo, text-tenue, rounded-tarjeta...)
+ * en vez de colores hexadecimales sueltos en las vistas.
+ */
+
+/* Fuentes autoalojadas en public/fonts (licencia SIL OFL 1.1) */
+@font-face {
+    font-family: "Platypi";
+    src: url("../fonts/platypi-variable.woff2") format("woff2");
+    font-weight: 300 800;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Host Grotesk";
+    src: url("../fonts/host-grotesk-variable.woff2") format("woff2");
+    font-weight: 400 500;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "IBM Plex Mono";
+    src: url("../fonts/ibm-plex-mono-400.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "IBM Plex Mono";
+    src: url("../fonts/ibm-plex-mono-500.woff2") format("woff2");
+    font-weight: 500;
+    font-display: swap;
+}
+
+@theme {
+    /* Colores */
+    --color-fondo: #f4f4f4;
+    --color-superficie: #ffffff;
+    --color-tinta: #000000;
+    --color-tinta-suave: #1c1c1c;
+    /* Texto secundario: el Figma usa #999 (2.6:1); #6b6b6b da 4.9:1 sobre el fondo (WCAG AA) */
+    --color-tenue: #6b6b6b;
+    --color-borde: rgb(0 0 0 / 0.1);
+    --color-borde-fuerte: rgb(0 0 0 / 0.2);
+    --color-deshabilitado: rgb(0 0 0 / 0.15);
+    /* Naranja: solo acento mínimo (foco, ítem activo de la navegación, stock bajo) */
+    --color-acento: #f5a623;
+    --color-peligro: #d4183d;
+    /* Fondo de las miniaturas dentro de las tarjetas (CollectionCard del Figma) */
+    --color-miniatura: #f3f4f6;
+
+    /* Tipografías */
+    --font-display: "Platypi", Georgia, serif;
+    --font-sans: "Host Grotesk", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+
+    /* Escala tipográfica del Figma: text-titulo (h1 50/60), text-seccion (20), text-micro (10) */
+    --text-titulo: 3.125rem;
+    --text-titulo--line-height: 3.75rem;
+    --text-titulo--letter-spacing: -0.03em;
+    --text-seccion: 1.25rem;
+    --text-seccion--line-height: 1.375rem;
+    --text-seccion--letter-spacing: -0.03em;
+    --text-micro: 0.625rem;
+    --text-micro--line-height: 0.9375rem;
+
+    /* Radios */
+    --radius-miniatura: 6px;
+    --radius-tarjeta: 12px;
+    --radius-campo: 14px;
+    --radius-hoja: 24px;
+
+    /* Sombras: solo la barra flotante tiene sombra (las tarjetas del Figma son planas) */
+    --shadow-nav: 0 4px 21px rgb(0 0 0 / 0.25);
+
+    /* Movimiento: una sola curva "asentar" y duraciones cortas (feedback < 200 ms) */
+    --ease-asentar: cubic-bezier(0.22, 1, 0.36, 1);
+    --default-transition-duration: 140ms;
+    --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* Interletrado de los títulos en Platypi (-3 %) y de los filtros en mono */
+    --tracking-titulo: -0.03em;
+    --tracking-filtro: -0.22px;
+}
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+        /* El Figma oculta las barras de scroll; aquí quedan finas y claras para no perder la pista de scroll con mouse */
+        scrollbar-width: thin;
+        scrollbar-color: rgb(0 0 0 / 0.2) transparent;
+        /* Reserva siempre el espacio del scroll: así la barra flotante no se corre entre páginas cortas y largas */
+        scrollbar-gutter: stable;
+    }
+
+    body {
+        @apply bg-fondo font-sans text-tinta antialiased;
+    }
+
+    /* Foco visible: anillo negro (contraste) con halo naranja (acento) */
+    :focus-visible {
+        outline: 2px solid var(--color-tinta);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 5px rgb(245 166 35 / 0.45);
+    }
+
+    ::placeholder {
+        color: var(--color-tenue);
+        opacity: 1;
+    }
+}
+
+@layer components {
+    /* Spinner del botón en estado "cargando" (ver public/js/app.js) */
+    .spinner {
+        @apply inline-block size-4 animate-spin rounded-full border-2 border-current border-r-transparent;
+    }
+}
+
+/*
+ * Transiciones entre páginas (View Transitions entre documentos, solo CSS, sin JS).
+ * Al navegar, el navegador toma una "foto" de la página vieja y otra de la nueva y anima
+ * los elementos que tienen el mismo view-transition-name en las dos. Por eso el círculo
+ * negro de la barra (nav-activo) se desliza hasta el ítem de la página destino.
+ * Firefox y los navegadores sin soporte ignoran estas reglas y navegan normal.
+ * La regla que ACTIVA la transición (@view-transition) está inline en
+ * resources/views/layouts/partes/head.blade.php (ahí se explica por qué).
+ */
+
+.vt-encabezado {
+    view-transition-name: encabezado;
+}
+
+.vt-contenido {
+    view-transition-name: contenido;
+}
+
+.vt-barra {
+    view-transition-name: barra;
+}
+
+.vt-nav-activo {
+    view-transition-name: nav-activo;
+}
+
+/* Cada ícono de la barra tiene su propio nombre para quedar por encima del círculo
+   mientras este se desliza (si no, el círculo los taparía durante la animación).
+   La clase es "vt-icono-" + el nombre de la ruta (config/navegacion.php). */
+.vt-icono-home {
+    view-transition-name: nav-icono-home;
+}
+
+.vt-icono-dashboard {
+    view-transition-name: nav-icono-dashboard;
+}
+
+.vt-icono-search {
+    view-transition-name: nav-icono-search;
+}
+
+/* Hoja de formulario (components/hoja.blade.php) y su velo oscuro */
+.vt-hoja {
+    view-transition-name: hoja;
+}
+
+.vt-velo {
+    view-transition-name: velo;
+}
+
+@keyframes hoja-subir {
+    from {
+        transform: translateY(100%);
+    }
+}
+
+@keyframes hoja-bajar {
+    to {
+        transform: translateY(100%);
+    }
+}
+
+@keyframes hoja-aparecer {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+}
+
+@keyframes hoja-desaparecer {
+    to {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+}
+
+/* Durante la transición, las capas se apilan en el mismo orden que en la página:
+   velo (abajo) < hoja < barra flotante y sus íconos (arriba). Sin esto, la hoja tapa la barra. */
+::view-transition-group(velo) {
+    z-index: 1;
+}
+
+::view-transition-group(hoja) {
+    z-index: 2;
+}
+
+::view-transition-group(barra),
+::view-transition-group(nav-activo),
+::view-transition-group(nav-icono-home),
+::view-transition-group(nav-icono-dashboard),
+::view-transition-group(nav-icono-search) {
+    z-index: 3;
+}
+
+/* :only-child = la hoja existe solo en una de las dos páginas (se abre o se cierra) */
+::view-transition-new(hoja):only-child {
+    animation: hoja-subir 320ms var(--ease-asentar) both;
+}
+
+::view-transition-old(hoja):only-child {
+    animation: hoja-bajar 220ms var(--ease-asentar) both;
+}
+
+/* En escritorio la hoja es un modal centrado: aparece con un leve zoom en vez de subir */
+@media (min-width: 40rem) {
+    ::view-transition-new(hoja):only-child {
+        animation-name: hoja-aparecer;
+    }
+
+    ::view-transition-old(hoja):only-child {
+        animation-name: hoja-desaparecer;
+    }
+}
+
+/* Lo que cambia de lugar viaja en ~320 ms con la curva "asentar" del Figma */
+::view-transition-group(*) {
+    animation-duration: 320ms;
+    animation-timing-function: var(--ease-asentar);
+}
+
+/* El contenido (y el fondo) solo se funden, rápido: 140 ms */
+::view-transition-old(contenido),
+::view-transition-new(contenido),
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 140ms;
+}
+
+/*
+ * Icosaedro 3D (components/icosaedro.blade.php y public/js/icosaedro.js).
+ * touch-action: pan-y → en táctil, arrastrar en horizontal lo gira y en vertical la página hace scroll.
+ */
+[data-icosaedro] {
+    position: relative;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+[data-icosaedro] line,
+[data-icosaedro] path {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+/* Los dos SVG estáticos y el lienzo del 3D, uno encima del otro dentro del tamaño reservado */
+[data-icosaedro] svg,
+[data-icosaedro] canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/*
+ * SVG estático: el icosaedro se ve mientras carga el 3D; el huevo es el estado final con
+ * "reducir movimiento", sin WebGL o si Three.js no cargó (y entonces se funde desde el icosaedro).
+ */
+[data-icosaedro] svg {
+    transition: opacity 0.6s var(--ease-asentar);
+}
+
+[data-icosaedro] [data-forma="huevo"],
+[data-icosaedro]:is([data-modo="sin-webgl"], [data-modo="error"]) [data-forma="icosaedro"] {
+    opacity: 0;
+}
+
+[data-icosaedro]:is([data-modo="sin-webgl"], [data-modo="error"]) [data-forma="huevo"] {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-icosaedro] [data-forma="icosaedro"] {
+        opacity: 0;
+    }
+
+    [data-icosaedro] [data-forma="huevo"] {
+        opacity: 1;
+    }
+}
+
+/* Con el 3D listo, los SVG estáticos se ocultan (siguen ocupando su lugar: nada se mueve) */
+[data-icosaedro][data-webgl] svg {
+    visibility: hidden;
+}
+
+/*
+ * Impresión (reportes): texto negro sobre blanco, sin sombras y sin partir filas entre páginas.
+ * La barra flotante, los botones y los filtros llevan la clase print:hidden en sus vistas.
+ */
+@media print {
+    @page {
+        margin: 1.5cm;
+    }
+
+    html,
+    body {
+        background: #fff !important;
+    }
+
+    * {
+        color: #000 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+
+    /* Una fila (o una tarjeta) nunca queda partida entre dos hojas */
+    tr,
+    li,
+    section > div:first-child {
+        break-inside: avoid;
+    }
+
+    /* Si una tabla ocupa varias hojas, su encabezado se repite en cada una */
+    thead {
+        display: table-header-group;
+    }
+}
+
+/* Respeta a quien pidió menos movimiento en su sistema operativo */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

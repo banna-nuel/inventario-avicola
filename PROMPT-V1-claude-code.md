@@ -2,7 +2,7 @@
 
 > **Antes de lanzar (lo hace el usuario):** copiar los 4 documentos de la documentación a `docs/` dentro del repo, pegar la URL de Figma abajo, y dejar el working tree limpio (todo commiteado).
 >
-> **FIGMA_URL:** `<PEGAR AQUÍ LA URL DEL ARCHIVO DE FIGMA>`
+> **FIGMA_URL:** `https://www.figma.com/make/aJXyudVhEGlSiqnBRbUAx4/Collections-App?t=pEwTczZ1nYwFFBil-1`
 >
 > **Cómo lanzarlo:** abrir `claude` en la raíz del proyecto y escribir: *"Lee PROMPT-V1-claude-code.md completo y empieza por la Fase 0."*
 

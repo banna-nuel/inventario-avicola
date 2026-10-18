@@ -46,6 +46,28 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'activo' => 'boolean',
         ];
+    }
+
+    // Roles posibles (columna users.rol) con su nombre para mostrar
+    public const ROLES = [
+        'admin' => 'Administrador',
+        'encargado' => 'Encargado de inventario',
+    ];
+
+    // Atajo para las vistas y los permisos: auth()->user()->esAdmin()
+    public function esAdmin(): bool
+    {
+        return $this->rol === 'admin';
+    }
+
+    // Enlaces de config/navegacion.php ('barra' o 'modulos') que este usuario puede ver según su rol
+    public function enlaces(string $grupo): array
+    {
+        return array_values(array_filter(
+            config("navegacion.{$grupo}"),
+            fn (array $enlace) => in_array($this->rol, $enlace['roles'], true)
+        ));
     }
 }

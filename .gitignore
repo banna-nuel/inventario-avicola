@@ -24,3 +24,11 @@ Homestead.yaml
 Thumbs.db
 tailwindcss.exe
 public/css/app.css
+
+# Evidencia local de QA (capturas de Playwright) y archivos temporales del MCP de Playwright
+/docs/capturas
+/.playwright-mcp
+
+# Copias locales de la documentación (la ubicación canónica es docs/01 a 04) y sus zip
+docs/info/
+docs/*.zip
