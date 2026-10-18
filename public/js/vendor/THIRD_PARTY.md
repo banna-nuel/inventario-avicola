@@ -12,12 +12,15 @@ Para actualizarlos, ver la sección "Actualizar Three.js" del README del proyect
   - https://raw.githubusercontent.com/mrdoob/three.js/r186/build/three.core.js
 - **Descargado:** 2026-10-11. Sin modificar: el hash de blob de git de cada archivo coincide
   con el del repositorio en ese tag.
-- `three.module.js` importa `./three.core.js`: los dos archivos tienen que estar en esta misma carpeta.
+- **Ubicación:** `public/js/vendor/three-r186/`. La carpeta lleva la versión porque el servidor web
+  le pide al navegador que guarde `/js/vendor/` un año: con otra versión cambia la ruta, y ningún
+  navegador se queda con la copia vieja (ni con una mezcla de las dos).
+- `three.module.js` importa `./three.core.js`: los dos archivos tienen que estar en la misma carpeta.
 
 | Archivo | Bytes | SHA-256 |
 |---|---|---|
-| `three.module.js` | 662772 | `9052042d676cb0fdc1ddfefe193053f34b7ac0513a616fdac4535d49987812ea` |
-| `three.core.js` | 1458113 | `9edde002b066a9a05676a6127f67735b62baf399bdea529f2f7e31657da769e6` |
+| `three-r186/three.module.js` | 662772 | `9052042d676cb0fdc1ddfefe193053f34b7ac0513a616fdac4535d49987812ea` |
+| `three-r186/three.core.js` | 1458113 | `9edde002b066a9a05676a6127f67735b62baf399bdea529f2f7e31657da769e6` |
 
 ### Licencia (copia del archivo LICENSE del repositorio en el tag r186)
 

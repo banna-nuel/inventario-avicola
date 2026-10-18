@@ -1,0 +1,55 @@
+# Qué archivos del proyecto puede ver Docker al construir la imagen (el "contexto de build").
+#
+# Funciona al revés que de costumbre: la primera regla (*) deja TODO fuera, y después se
+# re-incluye (!) solo lo que la imagen necesita. Así, un archivo nuevo que aparezca en la
+# carpeta (un respaldo, un .env de prueba, un zip) nunca entra por accidente.
+# Si dos reglas chocan, gana la última.
+
+*
+
+# --- Nunca entran (ya quedan fuera por la regla *; se listan para que quede escrito) --------
+.git
+.env
+.env.*
+vendor
+node_modules
+storage
+docs
+.playwright-mcp
+tailwindcss.exe
+
+# --- Lo que la imagen sí necesita ------------------------------------------------------------
+!app/
+!bootstrap/
+!config/
+!database/
+!docker/
+!lang/
+!public/
+!resources/
+!routes/
+!tests/
+!artisan
+!composer.json
+!composer.lock
+!phpunit.xml
+# Plantilla sin secretos: la usa la etapa test para armar su .env de pruebas
+!.env.example
+
+# --- Fuera aunque estén dentro de las carpetas de arriba ---------------------------------------
+# Cachés de la máquina local (se arman dentro de la imagen)
+bootstrap/cache/*.php
+# CSS compilado en la máquina local (la imagen lo compila en la etapa css)
+public/css/app.css
+public/hot
+public/storage
+# Bases y respaldos: los datos no van en una imagen (el respaldo SQL con datos viejos está en
+# storage/app/respaldos, que ya queda fuera junto con todo storage/)
+database/*.sqlite
+database/*.sqlite-journal
+**/*.sql
+**/*.sql.gz
+**/*.zip
+# Basura del sistema operativo
+**/.DS_Store
+**/Thumbs.db

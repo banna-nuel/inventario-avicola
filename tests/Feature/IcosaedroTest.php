@@ -14,7 +14,8 @@ class IcosaedroTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const VENDOR = ['three.module.js', 'three.core.js'];
+    // Three.js vive en una carpeta con su versión (caché larga del navegador, ver THIRD_PARTY.md)
+    private const VENDOR = ['three-r186/three.module.js', 'three-r186/three.core.js'];
 
     // SHA-256 de las 30 <line> del icosaedro estático tal como quedó en la Fase 10 (commit b1cf288)
     private const HASH_ICOSAEDRO = 'da10a3b4cadd9bdacc98e6cdaca22fa33cb47c5f3cae5265ad99d0bdcaf4f771';
@@ -126,7 +127,7 @@ class IcosaedroTest extends TestCase
 
         // icosaedro.js importa Three.js con una ruta relativa del mismo origen
         $modulo = file_get_contents(public_path('js/icosaedro.js'));
-        $this->assertStringContainsString("import('./vendor/three.module.js')", $modulo);
+        $this->assertStringContainsString("import('./vendor/three-r186/three.module.js')", $modulo);
         $this->assertDoesNotMatchRegularExpression('#(import|from)\s*\(?\s*[\'"](https?:)?//#', $modulo);
     }
 
