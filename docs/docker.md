@@ -10,11 +10,12 @@ Guía para levantar la app con Docker sin haberlo usado antes. Docker es **una f
 4. [Primera vez, paso a paso](#4-primera-vez-paso-a-paso)
 5. [Uso diario](#5-uso-diario)
 6. [Apagar y borrar los datos](#6-apagar-y-borrar-los-datos)
-7. [Pruebas](#7-pruebas)
-8. [Qué hace cada archivo](#8-qué-hace-cada-archivo)
-9. [Protecciones y por qué](#9-protecciones-y-por-qué)
-10. [Problemas frecuentes](#10-problemas-frecuentes)
-11. [Actualizar versiones](#11-actualizar-versiones)
+7. [La contraseña de root de MySQL](#7-la-contraseña-de-root-de-mysql)
+8. [Pruebas](#8-pruebas)
+9. [Qué hace cada archivo](#9-qué-hace-cada-archivo)
+10. [Protecciones y por qué](#10-protecciones-y-por-qué)
+11. [Problemas frecuentes](#11-problemas-frecuentes)
+12. [Actualizar versiones](#12-actualizar-versiones)
 
 ---
 
@@ -75,51 +76,40 @@ La idea: en vez de instalar PHP, MySQL y nginx en Windows, se usan imágenes con
 
 Todos los comandos van en PowerShell, **dentro de la carpeta del proyecto**.
 
-> **Importante en Windows:** abre la terminal en la carpeta escribiendo la ruta tal como está en el disco. Usa la tecla **Tab** para completar (`cd C:\Users\...\proyectos\Pe` + Tab), o en el Explorador haz click derecho → "Abrir en Terminal". Si escribes una mayúscula distinta (por ejemplo `personales` en vez de `Personales`), `docker compose build` falla con `additional privileges requested` (ver [Problemas frecuentes](#10-problemas-frecuentes)).
+> **Importante en Windows:** abre la terminal en la carpeta escribiendo la ruta tal como está en el disco. Usa la tecla **Tab** para completar (`cd C:\Users\...\proyectos\Pe` + Tab), o en el Explorador haz click derecho → "Abrir en Terminal". Si escribes una mayúscula distinta (por ejemplo `personales` en vez de `Personales`), `docker compose build` falla con `additional privileges requested` (ver [Problemas frecuentes](#11-problemas-frecuentes)).
 
-### 4.1 Crear el archivo de secretos
+### 4.1 Crear los archivos de secretos
 
 ```powershell
-Copy-Item .env.docker.example .env.docker
+powershell -ExecutionPolicy Bypass -File scripts\docker-init.ps1
 ```
 
-`.env.docker` tiene la clave de la app y las contraseñas. **No va a Git** (está en `.gitignore`). La plantilla `.env.docker.example` sí está en Git, y nunca lleva valores reales.
+El script crea dos archivos, uno por servicio, a partir de sus plantillas:
 
-### 4.2 Construir las imágenes
+| Archivo | Lo recibe | Qué tiene |
+|---|---|---|
+| `.env.docker.app` | solo `app` | Variables de Laravel, con `APP_KEY` y `DB_PASSWORD` ya generadas |
+| `.env.docker.db` | solo `db` | Variables de MySQL, con `MYSQL_PASSWORD` igual a `DB_PASSWORD` |
 
-```powershell
-docker compose build
-```
+- Genera la clave y la contraseña con el generador criptográfico de Windows (.NET `RandomNumberGenerator`).
+- **No muestra los secretos** en pantalla y **nunca sobrescribe**: si alguno de los dos archivos ya existe, no cambia nada.
+- Los dos archivos **no van a Git** (`.gitignore`). Las plantillas (`.env.docker.app.example` y `.env.docker.db.example`) sí, y nunca llevan valores reales.
+- `-ExecutionPolicy Bypass` deja correr el script solo esta vez, sin cambiar la configuración de Windows.
 
-La primera vez baja las imágenes base y tarda unos minutos. En este equipo, sin caché y con las imágenes base ya descargadas, tardó **83 s**. Las siguientes veces reutiliza lo que no cambió: ~10-15 s.
+MySQL no recibe `APP_KEY` ni nada de Laravel, y Laravel no recibe las variables de MySQL: cada contenedor tiene solo lo que necesita.
 
-### 4.3 Generar la clave y la contraseña
-
-```powershell
-# Clave de cifrado de Laravel (APP_KEY)
-docker compose run --rm --no-deps app php artisan key:generate --show
-
-# Una contraseña aleatoria para la base
-docker compose run --rm --no-deps app php -r "echo bin2hex(random_bytes(24)), PHP_EOL;"
-```
-
-Abre `.env.docker` y pega:
-
-- el primer resultado (empieza con `base64:`) en `APP_KEY=`;
-- el segundo en **las dos** líneas `DB_PASSWORD=` y `MYSQL_PASSWORD=`. Tienen que ser iguales: una la usa Laravel para entrar y la otra MySQL para crear el usuario.
-
-`docker compose run --rm` levanta un contenedor de un solo uso, corre el comando y lo borra (`--rm`). `--no-deps` evita levantar la base para esto.
-
-### 4.4 Levantar la pila
+### 4.2 Construir y levantar la pila
 
 ```powershell
-docker compose up -d
+docker compose up -d --build
 docker compose ps
 ```
 
+`--build` construye las imágenes. La primera vez baja las imágenes base y tarda unos minutos. En este equipo, sin caché y con las imágenes base ya descargadas, tardó **83 s**; las siguientes veces reutiliza lo que no cambió: ~10-15 s.
+
 `-d` deja los contenedores corriendo en segundo plano. Espera a que `db` y `web` digan `healthy` en `docker compose ps`; la primera vez tarda ~30 s mientras MySQL se inicializa.
 
-### 4.5 Crear las tablas y los datos de demostración
+### 4.3 Crear las tablas y los datos de demostración
 
 ```powershell
 docker compose exec app php artisan migrate --seed --force
@@ -127,7 +117,7 @@ docker compose exec app php artisan migrate --seed --force
 
 `docker compose exec app ...` corre un comando dentro del contenedor `app` que ya está funcionando. Las migraciones **no** corren solas al arrancar, a propósito: cambiar la base es una decisión tuya. `--force` es necesario porque la app corre en modo producción.
 
-### 4.6 Entrar
+### 4.4 Entrar
 
 Abre **http://127.0.0.1:8080**.
 
@@ -154,7 +144,7 @@ Son cuentas de demostración: si algún día la app se publica, se cambian o se 
 | Migraciones nuevas | `docker compose exec app php artisan migrate --force` |
 
 - **El código vive dentro de la imagen**, no se lee de tu carpeta. Si cambias un archivo, hay que reconstruir (`docker compose up -d --build`) para verlo en Docker. Para programar a diario sigue siendo más cómodo XAMPP con `php artisan serve`.
-- **Si cambias `.env.docker`**, `docker compose up -d` recrea los contenedores afectados con los valores nuevos.
+- **Si cambias `.env.docker.app` o `.env.docker.db`**, `docker compose up -d` recrea los contenedores afectados con los valores nuevos.
 - **Puertos:** la app usa el **8080**. XAMPP usa el 80/443 (Apache) y el 3306 (MySQL), y `php artisan serve` el 8000: no chocan. La base de Docker no se publica en ningún puerto.
 
 ---
@@ -171,7 +161,7 @@ Apaga y borra los **contenedores** y las redes del proyecto. Los **volúmenes** 
 docker compose down -v
 ```
 
-⚠️ **Borra también los volúmenes: se pierden todos los datos de la base Docker.** No hay papelera. Úsalo solo si quieres empezar de cero (por ejemplo, para que MySQL vuelva a crear el usuario con otra contraseña). Después hay que repetir los pasos 4.4 y 4.5.
+⚠️ **Borra también los volúmenes: se pierden todos los datos de la base Docker.** No hay papelera. Úsalo solo si quieres empezar de cero (por ejemplo, para que MySQL vuelva a crear el usuario con otra contraseña). Después hay que repetir los pasos 4.2 y 4.3. Si además quieres contraseñas nuevas, antes borra `.env.docker.app` y `.env.docker.db` y vuelve a correr el script del paso 4.1.
 
 Nunca hace falta `docker system prune` ni `docker volume prune` para este proyecto: esos comandos borran cosas de **todos** los proyectos de Docker del equipo.
 
@@ -179,7 +169,65 @@ La base de XAMPP (`inventario_avicola` en tu MySQL de Windows) es otra base dist
 
 ---
 
-## 7. Pruebas
+## 7. La contraseña de root de MySQL
+
+La app no usa root: entra con `inventario`, que solo tiene permisos sobre su base. Pero MySQL igual crea dos cuentas de root (`root@localhost`, desde dentro del contenedor, y `root@%`, desde la red interna) con una contraseña aleatoria.
+
+### Verla
+
+MySQL la imprime **una sola vez**, en el log del primer arranque (con el volumen vacío):
+
+```powershell
+docker compose logs db | Select-String "GENERATED ROOT PASSWORD"
+```
+
+Ese log vive con el contenedor: desaparece con `docker compose down` o cuando Compose recrea `db` (por ejemplo, al cambiar `.env.docker.db` o la imagen). Si la vas a necesitar, guárdala en un gestor de contraseñas apenas levantes la pila por primera vez. Si ya no aparece, usa "Recuperarla".
+
+### Rotarla (sabiendo la actual)
+
+```powershell
+docker compose exec db mysql -uroot -p
+```
+
+Escribe la contraseña actual (no se ve mientras escribes) y, dentro de MySQL, cambia las dos cuentas:
+
+```sql
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'la-nueva';
+ALTER USER 'root'@'%' IDENTIFIED BY 'la-nueva';
+exit
+```
+
+### Recuperarla (si se perdió)
+
+Se arranca una copia temporal de MySQL sin control de permisos y sin red, se pone una contraseña nueva y se vuelve a la normalidad. Los datos no se tocan y el usuario de la app sigue con su contraseña.
+
+```powershell
+# 1. Apagar la base y levantar la copia temporal (sin permisos, sin red)
+docker compose stop db
+docker compose run -d --rm --no-deps --name inventario-avicola-db-rescate db --skip-grant-tables --skip-networking --mysqlx=OFF
+
+# 2. Esperar unos segundos y entrar sin contraseña
+docker exec -it inventario-avicola-db-rescate mysql -uroot
+```
+
+```sql
+FLUSH PRIVILEGES;
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'la-nueva';
+ALTER USER 'root'@'%' IDENTIFIED BY 'la-nueva';
+exit
+```
+
+```powershell
+# 3. Apagar la copia temporal (se borra sola) y volver a prender la base
+docker stop inventario-avicola-db-rescate
+docker compose start db
+```
+
+`FLUSH PRIVILEGES` vuelve a cargar los permisos, que la copia temporal arrancó sin cargar; sin él, `ALTER USER` no funciona. Mientras dura el procedimiento, la app no tiene base (`db` está apagada). Este procedimiento se probó sobre la pila de demo.
+
+---
+
+## 8. Pruebas
 
 ### Toda la suite, dentro de Docker
 
@@ -200,15 +248,16 @@ Levanta una base de pruebas desechable (en memoria, se borra sola) y corre `Movi
 
 ---
 
-## 8. Qué hace cada archivo
+## 9. Qué hace cada archivo
 
 | Archivo | Qué hace |
 |---|---|
 | `Dockerfile` | La receta de las imágenes, por etapas (ver abajo). |
 | `compose.yaml` | Los servicios, sus redes, volúmenes, límites y protecciones. Su `name: inventario-avicola` es el prefijo de contenedores, redes y volúmenes. |
 | `.dockerignore` | Qué archivos puede ver Docker al construir. Deja **todo** fuera y solo vuelve a incluir lo necesario: `.env`, `vendor/`, `storage/` (con el respaldo SQL), `docs/`, los `.sql`, los `.zip` y la base SQLite nunca entran. |
-| `.env.docker.example` | Plantilla de variables (sin secretos). Se copia como `.env.docker`. |
-| `.env.docker` | Tus secretos reales. Ignorado por Git. |
+| `.env.docker.app.example`, `.env.docker.db.example` | Plantillas de variables de cada servicio (sin secretos). |
+| `.env.docker.app`, `.env.docker.db` | Tus secretos reales, uno por servicio. Ignorados por Git. |
+| `scripts/docker-init.ps1` | Crea los dos archivos de secretos con valores aleatorios (paso 4.1). |
 | `docker/php/produccion.ini` | Ajustes de PHP: sin versión en las cabeceras, sin errores en pantalla, OPcache, límites. |
 | `docker/php/fpm.conf` | Cuántos procesos de PHP atienden peticiones y sus límites. |
 | `docker/php/entrypoint.sh` | Lo que corre cada vez que arranca `app`: revisa `APP_KEY`, arma la caché de configuración y las vistas, y arranca PHP. |
@@ -234,12 +283,12 @@ Las extensiones se eligieron mirando `composer.lock` (`ext-*` que piden los paqu
 `php artisan config:cache` guarda en un archivo los valores **del momento** en que corre. Si corriera al construir la imagen, guardaría una configuración sin `APP_KEY` y sin las credenciales (o peor: con ellas dentro de la imagen). Por eso:
 
 - **Al construir** se hacen las cachés que no dependen del entorno: `route:cache` y `view:cache`.
-- **Al arrancar** el contenedor, `entrypoint.sh` corre `config:cache` con las variables de `.env.docker` y la guarda en `/tmp` (en memoria). También rehace las vistas compiladas, porque el volumen `storage` sobrevive a los rebuilds.
+- **Al arrancar** el contenedor, `entrypoint.sh` corre `config:cache` con las variables de `.env.docker.app` y la guarda en `/tmp` (en memoria). También rehace las vistas compiladas, porque el volumen `storage` sobrevive a los rebuilds.
 - `bootstrap/cache` queda dentro de la imagen y es de solo lectura. No es un volumen: un volumen guardaría la caché de rutas del primer build y, al cambiar el código, las rutas quedarían viejas.
 
 ---
 
-## 9. Protecciones y por qué
+## 10. Protecciones y por qué
 
 | Protección | Dónde | Por qué |
 |---|---|---|
@@ -256,7 +305,7 @@ Las extensiones se eligieron mirando `composer.lock` (`ext-*` que piden los paqu
 | **X Plugin de MySQL apagado** | `db` (`--mysqlx=OFF`) | Un servicio de red menos (puerto 33060) que la app no usa. |
 | **Límites de CPU, memoria y procesos** | los tres | Un error o un abuso no se come el equipo: web 0,5 CPU / 128 MB, app 1 CPU / 512 MB, db 1 CPU / 1 GB. |
 | **Healthchecks** | `db`, `web` | `db` está sana cuando responde por TCP; `web`, cuando `/up` responde 200 pasando por nginx, PHP y Laravel. `app` espera a que `db` esté sana. |
-| **Secretos fuera de la imagen** | `.env.docker` | `APP_KEY` y las contraseñas llegan como variables al arrancar. Nunca se copian a la imagen ni van a Git. |
+| **Secretos fuera de la imagen y por servicio** | `.env.docker.app`, `.env.docker.db` | `APP_KEY` y las contraseñas llegan como variables al arrancar; nunca se copian a la imagen ni van a Git. Cada servicio recibe solo las suyas: `db` no ve `APP_KEY` y `app` no ve las variables de MySQL. Se generan con un generador criptográfico (`scripts/docker-init.ps1`). Docker *secrets* (archivos montados en vez de variables) queda como posible mejora de la auditoría. |
 | **Contexto de build mínimo** | `.dockerignore` | Lista de lo permitido. El respaldo SQL de `storage/app/respaldos` (datos viejos) nunca entra. Comprobado: el contexto tiene 156 archivos (3,5 MB) y ninguno prohibido. |
 | **Sin errores en pantalla** | `produccion.ini`, `APP_DEBUG=false` | Un error no muestra código ni datos internos; se registra en `docker compose logs app`. |
 | **Sin versiones a la vista** | `server_tokens off`, `expose_php = Off` | La cabecera `Server` dice solo `nginx` y no hay `X-Powered-By`. |
@@ -269,40 +318,40 @@ Las extensiones se eligieron mirando `composer.lock` (`ext-*` que piden los paqu
 ### Pendiente (lo define la auditoría de seguridad)
 
 - **Content-Security-Policy (CSP).** La app ya está preparada (sin scripts externos ni inline), pero una CSP mal armada rompe páginas: se agrega y se prueba en la auditoría.
-- **HTTPS y HSTS.** Esta pila sirve HTTP local. Con HTTPS: `SESSION_SECURE_COOKIE=true` en `.env.docker`, cabecera `Strict-Transport-Security`, y entonces sí importa la protección contra BREACH.
+- **HTTPS y HSTS.** Esta pila sirve HTTP local. Con HTTPS: `SESSION_SECURE_COOKIE=true` en `.env.docker.app`, cabecera `Strict-Transport-Security`, y entonces sí importa la protección contra BREACH.
 - **Escaneos** de vulnerabilidades de imágenes, de la app y de secretos (Trivy, ZAP, gitleaks).
 
 ---
 
-## 10. Problemas frecuentes
+## 11. Problemas frecuentes
 
 **`additional privileges requested: pass "--allow=fs.read=Dockerfile"` al construir.**
 La ruta de la terminal tiene otra mayúscula que la carpeta real (por ejemplo `...\personales\...` cuando en disco es `...\Personales\...`). Windows no distingue mayúsculas, pero el constructor de Docker Compose sí. Entra a la carpeta con la mayúscula correcta (Tab para completar) y repite.
 
-**`ERROR: falta APP_KEY en .env.docker` y `app` se reinicia una y otra vez.**
-Falta el paso 4.3. Completa `APP_KEY` y corre `docker compose up -d`.
+**`ERROR: falta APP_KEY en .env.docker.app` y `app` se reinicia una y otra vez.**
+Falta el paso 4.1 (o `APP_KEY` quedó vacía). Corre el script y después `docker compose up -d`.
 
 **La app muestra un error de conexión a la base.**
-`DB_PASSWORD` y `MYSQL_PASSWORD` tienen que ser iguales. Ojo: MySQL crea el usuario **solo la primera vez**, con el volumen vacío. Si cambias la contraseña después, la base ya creada sigue con la anterior: vuelve a poner la anterior o borra los datos (sección 6) y empieza de cero.
+`DB_PASSWORD` (en `.env.docker.app`) y `MYSQL_PASSWORD` (en `.env.docker.db`) tienen que ser iguales; el script los deja así. Ojo: MySQL crea el usuario **solo la primera vez**, con el volumen vacío. Si cambias la contraseña después, la base ya creada sigue con la anterior: vuelve a poner la anterior o borra los datos (sección 6) y empieza de cero.
 
 **El puerto 8080 está ocupado.**
-Cambia el primer número en `compose.yaml` (`"127.0.0.1:8081:8080"`) y también `APP_URL` en `.env.docker`.
+Cambia el primer número en `compose.yaml` (`"127.0.0.1:8081:8080"`) y también `APP_URL` en `.env.docker.app`.
 
 **"Hay algo en el 3306": ¿la base de Docker quedó abierta?**
 No. El 3306 de Windows es el MySQL/MariaDB de **XAMPP**. La base de Docker no publica ningún puerto (`docker compose port db 3306` no devuelve un puerto).
 
-**La contraseña de root de MySQL aparece en los logs.**
-Es la aleatoria de la primera inicialización (`GENERATED ROOT PASSWORD` en `docker compose logs db`). La app no la usa. Esos logs se borran junto con el contenedor (`docker compose down`); al volver a levantarlo no se imprime otra vez, porque la base ya está creada.
+**La contraseña de root de MySQL aparece en los logs, o ya no aparece.**
+Se imprime una sola vez, en el primer arranque, y el log se va con el contenedor. Cómo verla, rotarla o recuperarla: [sección 7](#7-la-contraseña-de-root-de-mysql).
 
 **Al arrancar `app` aparece `'user' directive is ignored when FPM is not running as root`.**
 Es esperado: el contenedor ya corre como `www-data`, sin root.
 
-**Cambié Three.js y algunos navegadores siguen con la versión vieja.**
-nginx le dice al navegador que guarde `/js/vendor/` y `/fonts/` por un año. Al actualizar Three.js, pon los archivos en una carpeta con la versión (por ejemplo `public/js/vendor/three-r187/`), cambia la ruta del `import` en `public/js/icosaedro.js` y la que revisa `IcosaedroTest`.
+**¿Por qué Three.js está en `public/js/vendor/three-r186/`?**
+nginx le pide al navegador que guarde `/js/vendor/` y `/fonts/` un año sin volver a preguntar. Con la versión en la carpeta, una versión nueva tiene otra ruta y se descarga de nuevo; con el mismo nombre, quien ya abrió la app seguiría con la copia vieja. El README explica cómo actualizarlo ("Actualizar Three.js").
 
 ---
 
-## 11. Actualizar versiones
+## 12. Actualizar versiones
 
 1. Busca la versión nueva en Docker Hub (por ejemplo, `php` con tags `8.4.x-fpm-alpine3.yy`).
 2. Obtén su digest:

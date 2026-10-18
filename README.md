@@ -91,15 +91,10 @@ Una segunda forma de correr la app, **además** de XAMPP: nginx + PHP 8.4 + MySQ
 **Primera vez** (PowerShell, en la carpeta del proyecto escrita tal como está en el disco: usa Tab para completar la ruta):
 
 ```powershell
-Copy-Item .env.docker.example .env.docker
-docker compose build
+# Crea .env.docker.app y .env.docker.db con APP_KEY y contraseñas aleatorias (no las muestra)
+powershell -ExecutionPolicy Bypass -File scripts\docker-init.ps1
 
-# Pega el resultado en APP_KEY de .env.docker
-docker compose run --rm --no-deps app php artisan key:generate --show
-# Pega el resultado en DB_PASSWORD y en MYSQL_PASSWORD (las dos iguales)
-docker compose run --rm --no-deps app php -r "echo bin2hex(random_bytes(24)), PHP_EOL;"
-
-docker compose up -d
+docker compose up -d --build
 docker compose exec app php artisan migrate --seed --force
 ```
 
@@ -117,7 +112,7 @@ Abre **http://127.0.0.1:8080** y entra con las [cuentas de demostración](#cuent
 
 **Puertos:** solo **127.0.0.1:8080** (la app). MySQL no se publica, así que no choca con el 3306 de XAMPP; tampoco con el 8000 de `php artisan serve`. La base de Docker y la de XAMPP son distintas.
 
-**Secretos:** `.env.docker` (no va a Git). `APP_KEY` nunca se guarda en la imagen. Con HTTPS, `SESSION_SECURE_COOKIE` va en `true`.
+**Secretos:** uno por servicio, `.env.docker.app` (Laravel) y `.env.docker.db` (MySQL), fuera de Git. `db` no recibe `APP_KEY` y `APP_KEY` nunca se guarda en la imagen. La contraseña de root de MySQL se imprime una sola vez en el log de `db` (cómo verla o rotarla: [docs/docker.md](docs/docker.md#7-la-contraseña-de-root-de-mysql)). Con HTTPS, `SESSION_SECURE_COOKIE` va en `true`.
 
 ---
 
@@ -171,23 +166,24 @@ Con MySQL, la prueba `test_rn04_en_mysql_la_fila_del_producto_se_bloquea_con_for
 
 ## Actualizar Three.js (archivo de vendor)
 
-Three.js no se instala con npm ni se carga desde un CDN: sus archivos están en `public/js/vendor/` y se sirven desde la propia app. Para pasar a otra versión:
+Three.js no se instala con npm ni se carga desde un CDN: sus archivos están en `public/js/vendor/three-r186/` y se sirven desde la propia app. La carpeta lleva la versión a propósito: el servidor web de Docker le pide al navegador que guarde `/js/vendor/` un año sin volver a preguntar, así que una versión nueva tiene que tener **otra ruta** (si no, quien ya abrió la app seguiría con la copia vieja, o con una mezcla de las dos). Para pasar a otra versión:
 
 1. En https://github.com/mrdoob/three.js/releases elige una versión estable publicada **hace más de 2 semanas** (por ejemplo `r187`).
-2. Descarga los dos archivos de su carpeta `build/` (`three.module.js` importa a `three.core.js`, así que van juntos):
+2. Descarga los dos archivos de su carpeta `build/` en una carpeta nueva con la versión (`three.module.js` importa a `three.core.js`, así que van juntos):
 
    ```powershell
    $v = 'r187'
-   Invoke-WebRequest "https://raw.githubusercontent.com/mrdoob/three.js/$v/build/three.module.js" -OutFile public/js/vendor/three.module.js
-   Invoke-WebRequest "https://raw.githubusercontent.com/mrdoob/three.js/$v/build/three.core.js" -OutFile public/js/vendor/three.core.js
-   Get-FileHash public/js/vendor/three.*.js -Algorithm SHA256
+   New-Item -ItemType Directory public/js/vendor/three-$v | Out-Null
+   Invoke-WebRequest "https://raw.githubusercontent.com/mrdoob/three.js/$v/build/three.module.js" -OutFile public/js/vendor/three-$v/three.module.js
+   Invoke-WebRequest "https://raw.githubusercontent.com/mrdoob/three.js/$v/build/three.core.js" -OutFile public/js/vendor/three-$v/three.core.js
+   Get-FileHash public/js/vendor/three-$v/*.js -Algorithm SHA256
    ```
 
-3. Actualiza `public/js/vendor/THIRD_PARTY.md`: versión, URLs, fecha, tamaño y SHA-256 de cada archivo (y la licencia, si cambió).
-4. Corre `php artisan test`: `IcosaedroTest` falla si los SHA-256 de `THIRD_PARTY.md` no coinciden con los archivos.
-5. Abre Inicio y el login y revisa que el icosaedro gire, que se transforme en huevo y que la consola del navegador no tenga errores.
-
-**Con Docker:** nginx le pide al navegador que guarde `/js/vendor/` un año sin volver a preguntar. Si los archivos nuevos se llaman igual que los viejos, quien ya abrió la app seguiría con la versión anterior (o con una mezcla de las dos). Antes de publicar una versión nueva de Three.js con Docker, ponla en una carpeta con la versión (por ejemplo `public/js/vendor/three-r187/`) y actualiza el `import` de `public/js/icosaedro.js` y la ruta que revisa `IcosaedroTest` (ver [docs/docker.md](docs/docker.md#10-problemas-frecuentes)).
+3. Cambia la ruta en `public/js/icosaedro.js` (`import('./vendor/three-r187/three.module.js')`) y en `tests/Feature/IcosaedroTest.php` (la constante `VENDOR` y la ruta del `import`).
+4. Actualiza `public/js/vendor/THIRD_PARTY.md`: versión, URLs, ubicación, fecha, tamaño y SHA-256 de cada archivo (y la licencia, si cambió).
+5. Borra la carpeta de la versión anterior (`public/js/vendor/three-r186/`).
+6. Corre `php artisan test`: `IcosaedroTest` falla si los SHA-256 de `THIRD_PARTY.md` no coinciden con los archivos o si el `import` no apunta a la carpeta nueva.
+7. Abre Inicio y el login y revisa que el icosaedro gire, que se transforme en huevo y que la consola del navegador no tenga errores. Con Docker: `docker compose up -d --build`.
 
 ---
 
@@ -239,7 +235,8 @@ resources/views/components/        Componentes Blade: boton, campo, select, hoja
 resources/views/{modulo}/          Vistas de cada módulo; create/edit son "hojas" sobre el listado
 public/js/app.js                   JavaScript vanilla (hoja accesible, filtros, resumen de stock, imprimir)
 public/js/icosaedro.js             Icosaedro 3D que se transforma en huevo (módulo ES; carga Three.js solo cuando hace falta)
-public/js/vendor/                  Three.js autoalojado + THIRD_PARTY.md (versión, origen, SHA-256 y licencia)
+public/js/vendor/three-r186/       Three.js autoalojado, en una carpeta con su versión
+public/js/vendor/THIRD_PARTY.md    Versión, origen, SHA-256 y licencia de Three.js
 app/View/Components/Icosaedro.php  Componente x-icosaedro (calcula los SVG estáticos: icosaedro y huevo)
 tests/Feature/                     Pruebas de cada fase
 docs/                              Requerimientos, casos de uso, modelo de datos y arquitectura
@@ -247,7 +244,8 @@ docs/docker.md                     Guía de Docker para principiantes
 Dockerfile                         Imágenes de Docker por etapas (composer, css, runtime, test, web)
 compose.yaml                       Pila Docker: web (nginx), app (PHP-FPM) y db (MySQL 8.4)
 docker/                            Configuración de PHP, php-fpm y nginx para las imágenes
-.env.docker.example                Plantilla de variables de Docker (los secretos van en .env.docker)
+.env.docker.*.example              Plantillas de variables de Docker, una por servicio (app y db)
+scripts/docker-init.ps1            Crea .env.docker.app y .env.docker.db con secretos aleatorios
 ```
 
 ---
