@@ -32,6 +32,7 @@ Hecho con **Laravel 12**, **Blade**, **Tailwind CSS v4 (CLI standalone, sin Node
 - **Composer 2**.
 - **MySQL o MariaDB** (por ejemplo, el de XAMPP, usuario `root` sin contraseña).
 - **`tailwindcss.exe` v4.3.x** (el ejecutable standalone de Tailwind para Windows; no se usa Node ni npm). No está en Git: se descarga una vez por equipo (paso 2 abajo).
+- **Opcional:** Docker Desktop, para correrla en contenedores sin instalar nada de lo anterior ([Docker](#docker-opcional)).
 
 ---
 
@@ -78,6 +79,45 @@ Abre **http://127.0.0.1:8000** e inicia sesión con una de las cuentas de demost
 | `APP_LOCALE` | `es` | Mensajes y validaciones en español. |
 | `SESSION_LIFETIME` | `30` | La sesión se cierra tras 30 minutos sin actividad (RNF-04). |
 | `DB_DATABASE` | `inventario_avicola` | Base de desarrollo. |
+
+---
+
+## Docker (opcional)
+
+Una segunda forma de correr la app, **además** de XAMPP: nginx + PHP 8.4 + MySQL 8.4 en contenedores endurecidos (sin root, disco de solo lectura, sin capabilities, base sin puerto publicado). La guía completa, pensada para quien nunca usó Docker, está en **[docs/docker.md](docs/docker.md)**.
+
+**Requisitos:** Docker Desktop (con WSL 2), ~2 GB de disco y el puerto 8080 libre. No hace falta PHP, Composer ni Tailwind en Windows.
+
+**Primera vez** (PowerShell, en la carpeta del proyecto escrita tal como está en el disco: usa Tab para completar la ruta):
+
+```powershell
+Copy-Item .env.docker.example .env.docker
+docker compose build
+
+# Pega el resultado en APP_KEY de .env.docker
+docker compose run --rm --no-deps app php artisan key:generate --show
+# Pega el resultado en DB_PASSWORD y en MYSQL_PASSWORD (las dos iguales)
+docker compose run --rm --no-deps app php -r "echo bin2hex(random_bytes(24)), PHP_EOL;"
+
+docker compose up -d
+docker compose exec app php artisan migrate --seed --force
+```
+
+Abre **http://127.0.0.1:8080** y entra con las [cuentas de demostración](#cuentas-de-demostración) (`admin@test.com` / `encargado@test.com`, contraseña `12345678`).
+
+| Para | Comando |
+|---|---|
+| Prender | `docker compose up -d` |
+| Ver el estado (`db` y `web` deben decir `healthy`) | `docker compose ps` |
+| Ver los logs | `docker compose logs -f` |
+| Aplicar cambios del código | `docker compose up -d --build` |
+| Apagar (los datos se conservan) | `docker compose down` |
+| ⚠️ Apagar **y borrar los datos** de la base Docker | `docker compose down -v` |
+| Pruebas dentro de Docker | `docker build --target test -t inventario-avicola/test:local .` |
+
+**Puertos:** solo **127.0.0.1:8080** (la app). MySQL no se publica, así que no choca con el 3306 de XAMPP; tampoco con el 8000 de `php artisan serve`. La base de Docker y la de XAMPP son distintas.
+
+**Secretos:** `.env.docker` (no va a Git). `APP_KEY` nunca se guarda en la imagen. Con HTTPS, `SESSION_SECURE_COOKIE` va en `true`.
 
 ---
 
@@ -147,6 +187,8 @@ Three.js no se instala con npm ni se carga desde un CDN: sus archivos están en 
 4. Corre `php artisan test`: `IcosaedroTest` falla si los SHA-256 de `THIRD_PARTY.md` no coinciden con los archivos.
 5. Abre Inicio y el login y revisa que el icosaedro gire, que se transforme en huevo y que la consola del navegador no tenga errores.
 
+**Con Docker:** nginx le pide al navegador que guarde `/js/vendor/` un año sin volver a preguntar. Si los archivos nuevos se llaman igual que los viejos, quien ya abrió la app seguiría con la versión anterior (o con una mezcla de las dos). Antes de publicar una versión nueva de Three.js con Docker, ponla en una carpeta con la versión (por ejemplo `public/js/vendor/three-r187/`) y actualiza el `import` de `public/js/icosaedro.js` y la ruta que revisa `IcosaedroTest` (ver [docs/docker.md](docs/docker.md#10-problemas-frecuentes)).
+
 ---
 
 ## Icosaedro → huevo (RNF-08)
@@ -201,6 +243,11 @@ public/js/vendor/                  Three.js autoalojado + THIRD_PARTY.md (versi�
 app/View/Components/Icosaedro.php  Componente x-icosaedro (calcula los SVG estáticos: icosaedro y huevo)
 tests/Feature/                     Pruebas de cada fase
 docs/                              Requerimientos, casos de uso, modelo de datos y arquitectura
+docs/docker.md                     Guía de Docker para principiantes
+Dockerfile                         Imágenes de Docker por etapas (composer, css, runtime, test, web)
+compose.yaml                       Pila Docker: web (nginx), app (PHP-FPM) y db (MySQL 8.4)
+docker/                            Configuración de PHP, php-fpm y nginx para las imágenes
+.env.docker.example                Plantilla de variables de Docker (los secretos van en .env.docker)
 ```
 
 ---
