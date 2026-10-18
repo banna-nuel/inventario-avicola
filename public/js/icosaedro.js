@@ -4,7 +4,7 @@
 // - Componente: resources/views/components/icosaedro.blade.php. Ahí están los dos SVG estáticos: el
 //   icosaedro, que se ve mientras carga el 3D, y el huevo, que es el estado final sin WebGL o con
 //   "reducir movimiento" (en esos dos casos no se descarga Three.js).
-// - Three.js está autoalojado en public/js/vendor (ver THIRD_PARTY.md) y se descarga solo si hace falta:
+// - Three.js está autoalojado en public/js/vendor/three-r186 (ver THIRD_PARTY.md) y se descarga solo si hace falta:
 //   después del evento "load" y cuando el icosaedro está cerca de la pantalla (no frena la carga).
 // - Aparece como icosaedro y a los 1,2 s se transforma en huevo (en 1,4 s); cada click alterna entre las
 //   dos formas (en 1 s). Las 30 aristas se parten en tramos que se curvan sobre la superficie del huevo, y
@@ -85,7 +85,9 @@ function prepararCuandoSeVea(contenedor) {
             return;
         }
 
-        import('./vendor/three.module.js')
+        // La carpeta lleva la versión: al actualizar Three.js cambia la ruta y ningún navegador
+        // se queda con la copia vieja guardada en caché (README, "Actualizar Three.js")
+        import('./vendor/three-r186/three.module.js')
             .then((THREE) => iniciar(contenedor, contexto, THREE))
             .catch(() => { contenedor.dataset.modo = 'error'; });
     }, { rootMargin: '200px' });
