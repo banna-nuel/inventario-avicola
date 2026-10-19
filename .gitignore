@@ -37,3 +37,12 @@ public/css/app.css
 # Copias locales de la documentación (la ubicación canónica es docs/01 a 04) y sus zip
 docs/info/
 docs/*.zip
+
+# Volcados y bases locales: respaldos .sql, zip sueltos en la raíz y la base SQLite sin extensión
+*.sql
+/*.zip
+/inventario_avicola
+
+# Ajustes locales del asistente de IA y prompts internos de planeación (no se versionan)
+/.claude/
+/PROMPT-*.md
