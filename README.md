@@ -6,6 +6,20 @@ Hecho con **Laravel 12**, **Blade**, **Tailwind CSS v4 (CLI standalone, sin Node
 
 ---
 
+## Inicio rápido (Docker)
+
+Con Docker Desktop abierto, en PowerShell y dentro de la carpeta del proyecto (escribe la ruta tal como está en el disco: usa Tab):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\docker-init.ps1   # una sola vez: crea los secretos
+docker compose up -d --build                                        # espera "healthy" en: docker compose ps
+docker compose exec app php artisan migrate --seed --force          # tablas y datos de demostración
+```
+
+Abre **http://127.0.0.1:8080** y entra con una de las [cuentas de demostración](#cuentas-de-demostración). Paso a paso y uso diario: [Docker (opcional)](#docker-opcional) y [docs/docker.md](docs/docker.md). Sin Docker, con XAMPP: [Levantar el proyecto desde cero](#levantar-el-proyecto-desde-cero-también-en-el-portátil).
+
+---
+
 ## Qué incluye la v1
 
 | Módulo | Administrador | Encargado de inventario |
