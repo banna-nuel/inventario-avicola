@@ -269,7 +269,7 @@ Levanta una base de pruebas desechable (en memoria, se borra sola) y corre `Movi
 
 | Etapa | Qué hace | ¿Termina en una imagen que corre? |
 |---|---|---|
-| `base` | PHP 8.4.26 sobre Alpine + las extensiones que faltan (`pdo_mysql` y `bcmath`, que pide `laravel-lang`) + `php.ini` de producción. | Es la base de `app` |
+| `base` | PHP 8.4.27 sobre Alpine + las extensiones que faltan (`pdo_mysql` y `bcmath`, que pide `laravel-lang`) + `php.ini` de producción. | Es la base de `app` |
 | `composer` | `composer install --no-dev` con `composer.lock` y el autoloader optimizado. Revisa que PHP cumpla todos los requisitos del lock. | No, solo pasa `vendor/` |
 | `css` | Baja el binario oficial de Tailwind v4.3.3 para Linux, **verifica su SHA-256** contra el fijado en el Dockerfile y compila el CSS con `--minify`. Sin npm. | No, solo pasa `app.css` |
 | `runtime` | Código + `vendor/` + CSS. Sin `.env`, sin `tests/`, sin herramientas de compilación. Deja hechas las cachés de paquetes, rutas y vistas. Corre como `www-data`. | Sí: servicio `app` |
@@ -292,7 +292,7 @@ Las extensiones se eligieron mirando `composer.lock` (`ext-*` que piden los paqu
 
 | Protección | Dónde | Por qué |
 |---|---|---|
-| **Versiones fijas con digest** (`php:8.4.26-fpm-alpine3.24@sha256:...`) | `Dockerfile`, `compose.yaml` | El tag dice la versión; el digest garantiza que siempre se baja **exactamente** la misma imagen, aunque alguien vuelva a publicar el tag. Construir hoy o en un año da lo mismo. |
+| **Versiones fijas con digest** (`php:8.4.27-fpm-alpine3.24@sha256:...`) | `Dockerfile`, `compose.yaml` | El tag dice la versión; el digest garantiza que siempre se baja **exactamente** la misma imagen, aunque alguien vuelva a publicar el tag. Construir hoy o en un año da lo mismo. |
 | **Hash del binario de Tailwind** | `Dockerfile` (etapa `css`) | Si el archivo descargado fuera alterado, el SHA-256 no coincide y el build se detiene. El hash se comprobó contra GitHub y contra el `sha256sums.txt` oficial. |
 | **Sin root** | `www-data` (82) en app, `nginx` (101) en web, `mysql` (999) en db | Si alguien lograra ejecutar código, no tendría permisos de administrador dentro del contenedor. |
 | **Disco de solo lectura** (`read_only: true`) | los tres | No se pueden modificar programas ni configuración. Solo se escribe en `/tmp` y `/run` (en memoria) y en los volúmenes. Probado: escribir en el código, en `/etc` o en `public/` da `Read-only file system`. |
@@ -371,7 +371,7 @@ Versiones actuales:
 
 | Componente | Versión |
 |---|---|
-| PHP | 8.4.26 (FPM, Alpine 3.24) |
+| PHP | 8.4.27 (FPM, Alpine 3.24) |
 | Composer | 2.10.3 |
 | nginx | 1.30.6 (nginx-unprivileged, Alpine 3.24) |
 | MySQL | 8.4.11 (LTS) |
