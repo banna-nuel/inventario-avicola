@@ -16,6 +16,7 @@ Guía para levantar la app con Docker sin haberlo usado antes. Docker es **una f
 10. [Protecciones y por qué](#10-protecciones-y-por-qué)
 11. [Problemas frecuentes](#11-problemas-frecuentes)
 12. [Actualizar versiones](#12-actualizar-versiones)
+13. [Actualizaciones de seguridad de PHP](#13-actualizaciones-de-seguridad-de-php)
 
 ---
 
@@ -354,6 +355,8 @@ nginx le pide al navegador que guarde `/js/vendor/` y `/fonts/` un año sin volv
 
 ## 12. Actualizar versiones
 
+Si la actualización es por un aviso de seguridad de PHP, sigue la [sección 13](#13-actualizaciones-de-seguridad-de-php).
+
 1. Busca la versión nueva en Docker Hub (por ejemplo, `php` con tags `8.4.x-fpm-alpine3.yy`).
 2. Obtén su digest:
    ```powershell
@@ -378,3 +381,28 @@ Versiones actuales:
 | MySQL | 8.4.11 (LTS) |
 | Debian (solo para compilar el CSS) | trixie-20261005-slim |
 | Tailwind CSS | v4.3.3 |
+
+---
+
+## 13. Actualizaciones de seguridad de PHP
+
+Cuando php.net publica una versión que corrige vulnerabilidades, la imagen se actualiza así. Los avisos salen en [php.net](https://www.php.net/) y en los [avisos de seguridad de php-src](https://github.com/php/php-src/security/advisories), y cada uno dice qué versión los corrige en cada rama (8.2, 8.3, 8.4...). Ejemplo real: PHP 8.4.27 (21-10-2026) corrige CVE-2026-109618 y CVE-2026-109619.
+
+1. **Confirma la versión que corrige el aviso en la rama 8.4**, la que usa esta imagen.
+2. **Comprueba que la imagen oficial ya existe**, con la misma versión de Alpine que el `Dockerfile` (o la vigente), y anota su digest:
+   ```powershell
+   docker manifest inspect php:8.4.27-fpm-alpine3.24
+   docker buildx imagetools inspect php:8.4.27-fpm-alpine3.24 --format "{{.Manifest.Digest}}"
+   ```
+   Si responde `no such manifest`, todavía no está publicada; puede tardar unas horas después del anuncio (la 8.4.27 apareció en Docker Hub unas 11 horas después del aviso). **Espera**: no compiles PHP por tu cuenta, no uses imágenes que no sean la oficial `php` y no apliques mitigaciones a medias.
+3. **Cambia tag y digest juntos** en `ARG PHP_IMAGE` del `Dockerfile`, y la versión en las tablas de esta guía (etapas, protecciones y versiones actuales).
+4. **Reconstruye sin caché, bajando de nuevo las imágenes base**, y confirma la versión:
+   ```powershell
+   docker compose build --pull --no-cache
+   docker compose up -d
+   docker compose exec app php -v
+   ```
+5. **Prueba**: la suite completa (`docker build --pull --target test -t inventario-avicola/test:local .`), `MovimientoTest` contra MySQL ([sección 8](#8-pruebas)) y un recorrido corto en el navegador: entrar con los dos roles, registrar un movimiento y ver el huevo en Inicio.
+6. **Revisa** que `docker compose ps` muestre `db` y `web` en `healthy` y que `docker compose logs app web` no tenga errores ni reinicios.
+
+**El PHP de XAMPP es otra instalación**: esta imagen no lo actualiza. Revisa si el aviso también cubre la rama 8.2 de XAMPP (en este ejemplo sí: se corrige en 8.2.35) y actualiza XAMPP. La rama 8.2 deja de recibir parches de seguridad el 31-12-2026.
