@@ -123,7 +123,7 @@ Abre **http://127.0.0.1:8080** y entra con las [cuentas de demostración](#cuent
 | Ver los logs | `docker compose logs -f` |
 | Aplicar cambios del código | `docker compose up -d --build` |
 | Apagar (los datos se conservan) | `docker compose down` |
-| ⚠️ Apagar **y borrar los datos** de la base Docker | `docker compose down -v` |
+| Apagar **y borrar los datos** de la base Docker | `docker compose down -v` |
 | Pruebas dentro de Docker | `docker build --target test -t inventario-avicola/test:local .` |
 
 **Puertos:** solo **127.0.0.1:8080** (la app). MySQL no se publica, así que no choca con el 3306 de XAMPP; tampoco con el 8000 de `php artisan serve`. La base de Docker y la de XAMPP son distintas.
