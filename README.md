@@ -48,6 +48,8 @@ Abre **http://127.0.0.1:8080** y entra con una de las [cuentas de demostración]
 - **`tailwindcss.exe` v4.3.x** (el ejecutable standalone de Tailwind para Windows; no se usa Node ni npm). No está en Git: se descarga una vez por equipo (paso 2 abajo).
 - **Opcional:** Docker Desktop, para correrla en contenedores sin instalar nada de lo anterior ([Docker](#docker-opcional)).
 
+**Versiones de PHP:** el desarrollo local usa el **PHP 8.2 de XAMPP**, que deja de recibir parches de seguridad el **31-12-2026**; Docker usa **PHP 8.4** (8.4.27). Son instalaciones separadas: actualizar la imagen no actualiza XAMPP. Los avisos de seguridad de octubre de 2026 (CVE-2026-109618 y CVE-2026-109619) se corrigen en la rama 8.2 con **8.2.35**. Cómo actualizar la imagen: [docs/docker.md](docs/docker.md#13-actualizaciones-de-seguridad-de-php).
+
 ---
 
 ## Levantar el proyecto desde cero (también en el portátil)
