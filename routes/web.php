@@ -34,7 +34,8 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Con sesión iniciada y cuenta activa (matriz de permisos del PROMPT, sección 5)
+// Con sesión iniciada y cuenta activa (matriz de permisos: docs/uml/00-contexto-y-reglas.md,
+// sección 3.3; la verifica RutasTest::matriz())
 Route::middleware(['auth', 'activo'])->group(function () {
 
     // ---- Administrador y encargado ----

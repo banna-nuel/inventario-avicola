@@ -16,6 +16,7 @@ Guía para levantar la app con Docker sin haberlo usado antes. Docker es **una f
 10. [Protecciones y por qué](#10-protecciones-y-por-qué)
 11. [Problemas frecuentes](#11-problemas-frecuentes)
 12. [Actualizar versiones](#12-actualizar-versiones)
+13. [Actualizaciones de seguridad de PHP](#13-actualizaciones-de-seguridad-de-php)
 
 ---
 
@@ -269,7 +270,7 @@ Levanta una base de pruebas desechable (en memoria, se borra sola) y corre `Movi
 
 | Etapa | Qué hace | ¿Termina en una imagen que corre? |
 |---|---|---|
-| `base` | PHP 8.4.26 sobre Alpine + las extensiones que faltan (`pdo_mysql` y `bcmath`, que pide `laravel-lang`) + `php.ini` de producción. | Es la base de `app` |
+| `base` | PHP 8.4.27 sobre Alpine + las extensiones que faltan (`pdo_mysql` y `bcmath`, que pide `laravel-lang`) + `php.ini` de producción. | Es la base de `app` |
 | `composer` | `composer install --no-dev` con `composer.lock` y el autoloader optimizado. Revisa que PHP cumpla todos los requisitos del lock. | No, solo pasa `vendor/` |
 | `css` | Baja el binario oficial de Tailwind v4.3.3 para Linux, **verifica su SHA-256** contra el fijado en el Dockerfile y compila el CSS con `--minify`. Sin npm. | No, solo pasa `app.css` |
 | `runtime` | Código + `vendor/` + CSS. Sin `.env`, sin `tests/`, sin herramientas de compilación. Deja hechas las cachés de paquetes, rutas y vistas. Corre como `www-data`. | Sí: servicio `app` |
@@ -292,7 +293,7 @@ Las extensiones se eligieron mirando `composer.lock` (`ext-*` que piden los paqu
 
 | Protección | Dónde | Por qué |
 |---|---|---|
-| **Versiones fijas con digest** (`php:8.4.26-fpm-alpine3.24@sha256:...`) | `Dockerfile`, `compose.yaml` | El tag dice la versión; el digest garantiza que siempre se baja **exactamente** la misma imagen, aunque alguien vuelva a publicar el tag. Construir hoy o en un año da lo mismo. |
+| **Versiones fijas con digest** (`php:8.4.27-fpm-alpine3.24@sha256:...`) | `Dockerfile`, `compose.yaml` | El tag dice la versión; el digest garantiza que siempre se baja **exactamente** la misma imagen, aunque alguien vuelva a publicar el tag. Construir hoy o en un año da lo mismo. |
 | **Hash del binario de Tailwind** | `Dockerfile` (etapa `css`) | Si el archivo descargado fuera alterado, el SHA-256 no coincide y el build se detiene. El hash se comprobó contra GitHub y contra el `sha256sums.txt` oficial. |
 | **Sin root** | `www-data` (82) en app, `nginx` (101) en web, `mysql` (999) en db | Si alguien lograra ejecutar código, no tendría permisos de administrador dentro del contenedor. |
 | **Disco de solo lectura** (`read_only: true`) | los tres | No se pueden modificar programas ni configuración. Solo se escribe en `/tmp` y `/run` (en memoria) y en los volúmenes. Probado: escribir en el código, en `/etc` o en `public/` da `Read-only file system`. |
@@ -307,6 +308,7 @@ Las extensiones se eligieron mirando `composer.lock` (`ext-*` que piden los paqu
 | **Healthchecks** | `db`, `web` | `db` está sana cuando responde por TCP; `web`, cuando `/up` responde 200 pasando por nginx, PHP y Laravel. `app` espera a que `db` esté sana. |
 | **Secretos fuera de la imagen y por servicio** | `.env.docker.app`, `.env.docker.db` | `APP_KEY` y las contraseñas llegan como variables al arrancar; nunca se copian a la imagen ni van a Git. Cada servicio recibe solo las suyas: `db` no ve `APP_KEY` y `app` no ve las variables de MySQL. Se generan con un generador criptográfico (`scripts/docker-init.ps1`). Docker *secrets* (archivos montados en vez de variables) queda como posible mejora de la auditoría. |
 | **Contexto de build mínimo** | `.dockerignore` | Lista de lo permitido. El respaldo SQL de `storage/app/respaldos` (datos viejos) nunca entra. Comprobado: el contexto tiene 156 archivos (3,5 MB) y ninguno prohibido. |
+| **Sin subida de archivos y peticiones chicas** | `produccion.ini`, `default.conf` | La app no recibe archivos: `file_uploads = Off` y `session.upload_progress.enabled = 0`. El cuerpo de una petición tiene un tope de 2 MB en nginx (`client_max_body_size`) y en PHP (`post_max_size`); cada cabecera, de 8 KB (`large_client_header_buffers 4 8k`), y las cabeceras deben llegar en 10 s (`client_header_timeout`). Lo que se pasa recibe 413, 400 o 414 de nginx y no llega a PHP. |
 | **Sin errores en pantalla** | `produccion.ini`, `APP_DEBUG=false` | Un error no muestra código ni datos internos; se registra en `docker compose logs app`. |
 | **Sin versiones a la vista** | `server_tokens off`, `expose_php = Off` | La cabecera `Server` dice solo `nginx` y no hay `X-Powered-By`. |
 | **Solo `index.php` se ejecuta** | `default.conf` | Cualquier otro `.php` da 404, y `/index.php` no se puede pedir directo. Los archivos ocultos (`.env`, `.git`) también dan 404. |
@@ -353,6 +355,8 @@ nginx le pide al navegador que guarde `/js/vendor/` y `/fonts/` un año sin volv
 
 ## 12. Actualizar versiones
 
+Si la actualización es por un aviso de seguridad de PHP, sigue la [sección 13](#13-actualizaciones-de-seguridad-de-php).
+
 1. Busca la versión nueva en Docker Hub (por ejemplo, `php` con tags `8.4.x-fpm-alpine3.yy`).
 2. Obtén su digest:
    ```powershell
@@ -371,9 +375,34 @@ Versiones actuales:
 
 | Componente | Versión |
 |---|---|
-| PHP | 8.4.26 (FPM, Alpine 3.24) |
+| PHP | 8.4.27 (FPM, Alpine 3.24) |
 | Composer | 2.10.3 |
 | nginx | 1.30.6 (nginx-unprivileged, Alpine 3.24) |
 | MySQL | 8.4.11 (LTS) |
 | Debian (solo para compilar el CSS) | trixie-20261005-slim |
 | Tailwind CSS | v4.3.3 |
+
+---
+
+## 13. Actualizaciones de seguridad de PHP
+
+Cuando php.net publica una versión que corrige vulnerabilidades, la imagen se actualiza así. Los avisos salen en [php.net](https://www.php.net/) y en los [avisos de seguridad de php-src](https://github.com/php/php-src/security/advisories), y cada uno dice qué versión los corrige en cada rama (8.2, 8.3, 8.4...). Ejemplo real: PHP 8.4.27 (21-10-2026) corrige CVE-2026-109618 y CVE-2026-109619.
+
+1. **Confirma la versión que corrige el aviso en la rama 8.4**, la que usa esta imagen.
+2. **Comprueba que la imagen oficial ya existe**, con la misma versión de Alpine que el `Dockerfile` (o la vigente), y anota su digest:
+   ```powershell
+   docker manifest inspect php:8.4.27-fpm-alpine3.24
+   docker buildx imagetools inspect php:8.4.27-fpm-alpine3.24 --format "{{.Manifest.Digest}}"
+   ```
+   Si responde `no such manifest`, todavía no está publicada; puede tardar unas horas después del anuncio (la 8.4.27 apareció en Docker Hub unas 11 horas después del aviso). **Espera**: no compiles PHP por tu cuenta, no uses imágenes que no sean la oficial `php` y no apliques mitigaciones a medias.
+3. **Cambia tag y digest juntos** en `ARG PHP_IMAGE` del `Dockerfile`, y la versión en las tablas de esta guía (etapas, protecciones y versiones actuales).
+4. **Reconstruye sin caché, bajando de nuevo las imágenes base**, y confirma la versión:
+   ```powershell
+   docker compose build --pull --no-cache
+   docker compose up -d
+   docker compose exec app php -v
+   ```
+5. **Prueba**: la suite completa (`docker build --pull --target test -t inventario-avicola/test:local .`), `MovimientoTest` contra MySQL ([sección 8](#8-pruebas)) y un recorrido corto en el navegador: entrar con los dos roles, registrar un movimiento y ver el huevo en Inicio.
+6. **Revisa** que `docker compose ps` muestre `db` y `web` en `healthy` y que `docker compose logs app web` no tenga errores ni reinicios.
+
+**El PHP de XAMPP es otra instalación**: esta imagen no lo actualiza. Revisa si el aviso también cubre la rama 8.2 de XAMPP (en este ejemplo sí: se corrige en 8.2.35) y actualiza XAMPP. La rama 8.2 deja de recibir parches de seguridad el 31-12-2026.

@@ -19,7 +19,7 @@ return [
         ['ruta' => 'search', 'etiqueta' => 'Buscar', 'icono' => 'buscar', 'roles' => ['admin', 'encargado']],
     ],
 
-    // Tarjetas de acceso en Home (matriz de permisos del PROMPT, sección 5)
+    // Tarjetas de acceso en Home (matriz de permisos: docs/uml/00-contexto-y-reglas.md, sección 3.3)
     'modulos' => [
         ['ruta' => 'productos.index', 'etiqueta' => 'Productos', 'icono' => 'caja', 'roles' => ['admin', 'encargado'],
             'descripcion' => 'Stock actual, unidades y alertas'],
