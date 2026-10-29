@@ -11,6 +11,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Detrás de un proxy que atiende el HTTPS (Vercel): confiar en sus cabeceras X-Forwarded-*
+        // para que Laravel sepa que la página es https y arme enlaces y formularios con https.
+        // Solo si existe TRUSTED_PROXIES (la imagen de Vercel la define); en XAMPP y en la pila
+        // Docker local no existe y no cambia nada.
+        if ($proxies = env('TRUSTED_PROXIES')) {
+            $middleware->trustProxies(at: $proxies);
+        }
+
         // Alias para usar en las rutas: ->middleware('role:admin') y ->middleware('activo')
         $middleware->alias([
             'role' => \App\Http\Middleware\VerificarRol::class,

@@ -15,8 +15,11 @@
 #   runtime   3. la imagen de la app (php-fpm): código + vendor + CSS, sin .env y sin root
 #   test      4. opcional: corre php artisan test (docker build --target test .)
 #   web       5. nginx con la carpeta public/ (la imagen del servicio web)
+#   vercel    6. imagen única para la demo en Vercel: Apache + PHP + SQLite (docs/vercel.md)
 #
 # compose.yaml siempre construye con --target (runtime y web); no hace falta construir "a mano".
+# "vercel" es la última etapa a propósito: Vercel construye el Dockerfile sin --target, y sin
+# --target se construye la última.
 
 # --------------------------------------------------------------------------------------------
 # Versiones fijas. El tag dice la versión exacta y el digest (sha256:...) identifica la imagen
@@ -24,6 +27,9 @@
 # Para actualizar: cambiar tag y digest juntos (docs/docker.md, "Actualizar versiones").
 # --------------------------------------------------------------------------------------------
 ARG PHP_IMAGE=php:8.4.27-fpm-alpine3.24@sha256:8ce34c869fae0f8da2c82d8aeda222f0782e8e5ae2b370fb43cbad84e9e2ea55
+# La misma versión de PHP con Apache incluido, solo para la etapa vercel. Se actualiza junto con
+# PHP_IMAGE: las dos tienen que decir siempre la misma versión.
+ARG PHP_APACHE_IMAGE=php:8.4.27-apache-trixie@sha256:be1326658a7d36dba6be79a71212d6ff9c5f854335b8ba77d714da1852c1b2ea
 ARG COMPOSER_IMAGE=composer:2.10.3@sha256:af98f42dfff7c68ba8d53c2164fd9fde1087b7d449514baa38c418b1f6bc4bac
 ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.30.6-alpine3.24@sha256:782bb89768cc87b7f95c18b95baa1af250e5d451f26794f59363540161147c01
 ARG DEBIAN_IMAGE=debian:trixie-20261005-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
@@ -196,3 +202,104 @@ COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY docker/nginx/cabeceras-seguridad.conf /etc/nginx/snippets/cabeceras-seguridad.conf
 COPY public /var/www/html/public
 COPY --from=css /src/public/css/app.css /var/www/html/public/css/app.css
+
+
+# ============================================================================================
+# 6. vercel: imagen única para la demo en Vercel (docs/vercel.md). Solo para mostrar la app.
+#    Vercel corre una sola imagen, así que aquí Apache con PHP integrado (imagen oficial
+#    php:8.4.x-apache) sirve public/ y ejecuta index.php. La base es SQLite dentro del contenedor,
+#    nueva en cada arranque con los datos de demostración: no es para datos reales.
+# ============================================================================================
+FROM ${PHP_APACHE_IMAGE} AS vercel-base
+
+# bcmath, igual que en base (la exige dragon-code/support); pdo_sqlite ya viene en la imagen
+# oficial. Las imágenes Debian de PHP ya traen las herramientas para compilar extensiones.
+RUN set -eux; \
+    docker-php-ext-install -j"$(nproc)" bcmath; \
+    cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+# Los mismos ajustes de PHP que la pila local (sin subida de archivos, sin errores en pantalla...)
+COPY docker/php/produccion.ini $PHP_INI_DIR/conf.d/zz-inventario.ini
+
+WORKDIR /var/www/html
+
+
+# Revisa que este PHP cumpla lo que pide composer.lock (como hace la etapa composer con la base
+# Alpine). Va en una etapa aparte para que Composer no quede en la imagen final.
+FROM vercel-base AS vercel-requisitos
+
+COPY --from=composer-bin /usr/bin/composer /usr/bin/composer
+COPY composer.json composer.lock ./
+COPY --from=composer /var/www/html/vendor ./vendor
+RUN COMPOSER_ALLOW_SUPERUSER=1 composer check-platform-reqs --no-dev \
+    && touch /requisitos-ok
+
+
+FROM vercel-base AS vercel
+
+# Valores fijos de la demo; ninguno es secreto. APP_KEY no va aquí: llega de las variables del
+# proyecto en Vercel, que también puede cambiar cualquiera de estos.
+#   - SQLite dentro del contenedor (storage/demo), nueva en cada arranque (entrypoint).
+#   - Sesión en una cookie cifrada: sigue valiendo aunque Vercel abra otra copia del contenedor.
+#   - Cookies solo por HTTPS, y TRUSTED_PROXIES=* para creerle al proxy de Vercel que la página es
+#     https (bootstrap/app.php). Al contenedor solo se llega a través de ese proxy.
+#   - PORT: donde escucha Apache; Vercel usa el 80 si en el proyecto no se define otro.
+ENV APP_NAME="Inventario Avícola" \
+    APP_ENV=production \
+    APP_DEBUG=false \
+    APP_TIMEZONE=America/Bogota \
+    APP_LOCALE=es \
+    APP_FALLBACK_LOCALE=en \
+    LOG_CHANNEL=stderr \
+    LOG_LEVEL=warning \
+    DB_CONNECTION=sqlite \
+    DB_DATABASE=/var/www/html/storage/demo/inventario.sqlite \
+    SESSION_DRIVER=cookie \
+    SESSION_LIFETIME=30 \
+    SESSION_SECURE_COOKIE=true \
+    CACHE_STORE=database \
+    QUEUE_CONNECTION=sync \
+    MAIL_MAILER=log \
+    TRUSTED_PROXIES=* \
+    APP_CONFIG_CACHE=/tmp/laravel-config.php \
+    HOME=/tmp \
+    PORT=80
+
+# Hace que esta etapa espere a que la revisión de requisitos haya pasado
+COPY --from=vercel-requisitos /requisitos-ok /usr/local/share/inventario-requisitos-ok
+
+COPY --from=composer /var/www/html/vendor ./vendor
+COPY app ./app
+COPY bootstrap ./bootstrap
+COPY config ./config
+COPY database ./database
+COPY lang ./lang
+COPY public ./public
+COPY resources ./resources
+COPY routes ./routes
+COPY artisan composer.json ./
+COPY --from=css /src/public/css/app.css ./public/css/app.css
+COPY docker/vercel/apache.conf /etc/apache2/sites-available/000-default.conf
+COPY docker/vercel/entrypoint.sh /usr/local/bin/inventario-vercel-entrypoint
+
+# - Apache: escucha solo en $PORT, con el módulo de cabeceras y sin listados de carpetas ni
+#   página de estado (/server-status).
+# - storage/: las carpetas que Laravel espera, más storage/demo para la base SQLite.
+# - Cachés que no dependen del entorno: paquetes, rutas y vistas compiladas.
+# - storage/ queda de www-data, el usuario con el que Apache atiende las peticiones; el código
+#   queda de root y www-data solo puede leerlo.
+RUN set -eux; \
+    echo 'Listen ${PORT}' > /etc/apache2/ports.conf; \
+    a2enmod headers; \
+    a2dismod -f autoindex status; \
+    mkdir -p storage/app/private storage/app/public storage/framework/cache/data \
+        storage/framework/sessions storage/framework/views storage/logs storage/demo; \
+    php artisan package:discover --ansi; \
+    php artisan route:cache; \
+    php artisan view:cache; \
+    chown -R www-data:www-data storage; \
+    chmod 755 /usr/local/bin/inventario-vercel-entrypoint
+
+EXPOSE 80
+ENTRYPOINT ["inventario-vercel-entrypoint"]
+CMD ["apache2-foreground"]
