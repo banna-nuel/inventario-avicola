@@ -130,6 +130,8 @@ Abre **http://127.0.0.1:8080** y entra con las [cuentas de demostración](#cuent
 
 **Secretos:** uno por servicio, `.env.docker.app` (Laravel) y `.env.docker.db` (MySQL), fuera de Git. `db` no recibe `APP_KEY` y `APP_KEY` nunca se guarda en la imagen. La contraseña de root de MySQL se imprime una sola vez en el log de `db` (cómo verla o rotarla: [docs/docker.md](docs/docker.md#7-la-contraseña-de-root-de-mysql)). Con HTTPS, `SESSION_SECURE_COOKIE` va en `true`.
 
+**Demo en Vercel:** para ver la app en internet, con datos de demostración que se reinician solos (no para datos reales): [docs/vercel.md](docs/vercel.md).
+
 ---
 
 ## Scripts de Composer

@@ -264,6 +264,7 @@ Levanta una base de pruebas desechable (en memoria, se borra sola) y corre `Movi
 | `docker/php/entrypoint.sh` | Lo que corre cada vez que arranca `app`: revisa `APP_KEY`, arma la caché de configuración y las vistas, y arranca PHP. |
 | `docker/nginx/default.conf` | El servidor web: qué sirve nginx, qué pasa a PHP, gzip y caché. |
 | `docker/nginx/cabeceras-seguridad.conf` | Las cabeceras de seguridad de todas las respuestas. |
+| `docker/vercel/apache.conf`, `docker/vercel/entrypoint.sh` | Solo para la demo en Vercel (etapa `vercel`): Apache con las mismas reglas que nginx, y el arranque que crea la base SQLite de demostración ([docs/vercel.md](vercel.md)). |
 | `.gitattributes` | Fuerza finales de línea LF en los archivos que van a Linux (un `.sh` con CRLF de Windows no se puede ejecutar). |
 
 ### Las etapas del Dockerfile
@@ -276,6 +277,7 @@ Levanta una base de pruebas desechable (en memoria, se borra sola) y corre `Movi
 | `runtime` | Código + `vendor/` + CSS. Sin `.env`, sin `tests/`, sin herramientas de compilación. Deja hechas las cachés de paquetes, rutas y vistas. Corre como `www-data`. | Sí: servicio `app` |
 | `test` | Con dependencias de desarrollo; corre la suite completa. | Solo para probar |
 | `web` | nginx sin privilegios con la carpeta `public/` y el CSS compilado. | Sí: servicio `web` |
+| `vercel` | Imagen única para la demo en Vercel: Apache + PHP 8.4.27 (`php:8.4.27-apache-trixie`) + SQLite con los datos de demostración. Es la **última** etapa: Vercel construye sin `--target`. La pila local no la usa ([docs/vercel.md](vercel.md)). | Solo en Vercel |
 
 Las extensiones se eligieron mirando `composer.lock` (`ext-*` que piden los paquetes) y el código. Todo lo demás que piden ya viene en la imagen oficial; `intl` no hace falta (las fechas en español las traduce Carbon).
 
@@ -375,7 +377,7 @@ Versiones actuales:
 
 | Componente | Versión |
 |---|---|
-| PHP | 8.4.27 (FPM, Alpine 3.24) |
+| PHP | 8.4.27 (FPM, Alpine 3.24; y Apache, Debian trixie, para la demo en Vercel) |
 | Composer | 2.10.3 |
 | nginx | 1.30.6 (nginx-unprivileged, Alpine 3.24) |
 | MySQL | 8.4.11 (LTS) |
@@ -395,7 +397,7 @@ Cuando php.net publica una versión que corrige vulnerabilidades, la imagen se a
    docker buildx imagetools inspect php:8.4.27-fpm-alpine3.24 --format "{{.Manifest.Digest}}"
    ```
    Si responde `no such manifest`, todavía no está publicada; puede tardar unas horas después del anuncio (la 8.4.27 apareció en Docker Hub unas 11 horas después del aviso). **Espera**: no compiles PHP por tu cuenta, no uses imágenes que no sean la oficial `php` y no apliques mitigaciones a medias.
-3. **Cambia tag y digest juntos** en `ARG PHP_IMAGE` del `Dockerfile`, y la versión en las tablas de esta guía (etapas, protecciones y versiones actuales).
+3. **Cambia tag y digest juntos** en `ARG PHP_IMAGE` del `Dockerfile` y también en `ARG PHP_APACHE_IMAGE` (la misma versión con `-apache-trixie`, la de la [demo en Vercel](vercel.md)), y la versión en las tablas de esta guía (etapas, protecciones y versiones actuales).
 4. **Reconstruye sin caché, bajando de nuevo las imágenes base**, y confirma la versión:
    ```powershell
    docker compose build --pull --no-cache
