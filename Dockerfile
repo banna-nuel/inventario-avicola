@@ -240,7 +240,9 @@ FROM vercel-base AS vercel
 # Valores fijos de la demo; ninguno es secreto. APP_KEY no va aquí: llega de las variables del
 # proyecto en Vercel, que también puede cambiar cualquiera de estos.
 #   - SQLite dentro del contenedor (storage/demo), nueva en cada arranque (entrypoint).
-#   - Sesión en una cookie cifrada: sigue valiendo aunque Vercel abra otra copia del contenedor.
+#   - Sesión en la base del contenedor (en JSON, config/session.php): la cookie solo lleva el
+#     identificador, nunca los datos. Si Vercel abre otra copia del contenedor, hay que volver a
+#     entrar.
 #   - Cookies solo por HTTPS, y TRUSTED_PROXIES=* para creerle al proxy de Vercel que la página es
 #     https (bootstrap/app.php). Al contenedor solo se llega a través de ese proxy.
 #   - PORT: donde escucha Apache; Vercel usa el 80 si en el proyecto no se define otro.
@@ -254,7 +256,7 @@ ENV APP_NAME="Inventario Avícola" \
     LOG_LEVEL=warning \
     DB_CONNECTION=sqlite \
     DB_DATABASE=/var/www/html/storage/demo/inventario.sqlite \
-    SESSION_DRIVER=cookie \
+    SESSION_DRIVER=database \
     SESSION_LIFETIME=30 \
     SESSION_SECURE_COOKIE=true \
     CACHE_STORE=database \

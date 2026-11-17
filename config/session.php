@@ -50,6 +50,11 @@ return [
 
     'encrypt' => env('SESSION_ENCRYPT', false),
 
+    // La sesión se guarda como JSON y no con serialize() de PHP: al leerla no se crean objetos, así
+    // que una sesión manipulada (por ejemplo, con una APP_KEY filtrada) no puede ejecutar código.
+    // Va fija y no en el .env a propósito: ningún entorno necesita "php".
+    'serialization' => 'json',
+
     /*
     |--------------------------------------------------------------------------
     | Session File Location
