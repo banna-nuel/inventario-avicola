@@ -104,6 +104,8 @@ Esta parte es para quien sabe de programación: no la necesitas para usar el pro
 - **MySQL y Docker.** La base de datos y los tres contenedores: páginas, app y datos.
 - **Three.js.** Una biblioteca (piezas ya hechas) que dibuja el huevo en 3D.
 
+Detalles técnicos: [docs/desarrollo.md](docs/desarrollo.md).
+
 ## Estado del proyecto
 
 Terminado (versión 1): todo lo descrito aquí funciona. Queda para el futuro, por ejemplo, guardar reportes en PDF o Excel.
