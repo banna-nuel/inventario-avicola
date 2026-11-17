@@ -351,7 +351,7 @@ Se imprime una sola vez, en el primer arranque, y el log se va con el contenedor
 Es esperado: el contenedor ya corre como `www-data`, sin root.
 
 **¿Por qué Three.js está en `public/js/vendor/three-r186/`?**
-nginx le pide al navegador que guarde `/js/vendor/` y `/fonts/` un año sin volver a preguntar. Con la versión en la carpeta, una versión nueva tiene otra ruta y se descarga de nuevo; con el mismo nombre, quien ya abrió la app seguiría con la copia vieja. El README explica cómo actualizarlo ("Actualizar Three.js").
+nginx le pide al navegador que guarde `/js/vendor/` y `/fonts/` un año sin volver a preguntar. Con la versión en la carpeta, una versión nueva tiene otra ruta y se descarga de nuevo; con el mismo nombre, quien ya abrió la app seguiría con la copia vieja. Cómo actualizarlo: [docs/desarrollo.md, "Actualizar Three.js"](desarrollo.md#actualizar-threejs).
 
 ---
 

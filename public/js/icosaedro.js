@@ -86,7 +86,7 @@ function prepararCuandoSeVea(contenedor) {
         }
 
         // La carpeta lleva la versión: al actualizar Three.js cambia la ruta y ningún navegador
-        // se queda con la copia vieja guardada en caché (README, "Actualizar Three.js")
+        // se queda con la copia vieja guardada en caché (docs/desarrollo.md, "Actualizar Three.js")
         import('./vendor/three-r186/three.module.js')
             .then((THREE) => iniciar(contenedor, contexto, THREE))
             .catch(() => { contenedor.dataset.modo = 'error'; });

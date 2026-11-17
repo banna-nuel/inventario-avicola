@@ -1,7 +1,7 @@
 # Código de terceros (autoalojado)
 
 Archivos de librerías externas que la app sirve desde su propio dominio (sin CDN ni npm).
-Para actualizarlos, ver la sección "Actualizar Three.js" del README del proyecto.
+Para actualizarlos, ver la sección "Actualizar Three.js" de [docs/desarrollo.md](../../../docs/desarrollo.md#actualizar-threejs).
 
 ## Three.js r186
 

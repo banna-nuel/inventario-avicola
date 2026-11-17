@@ -201,7 +201,7 @@ class MovimientoTest extends TestCase
     public function test_rn04_en_mysql_la_fila_del_producto_se_bloquea_con_for_update(): void
     {
         // SQLite (la base normal de las pruebas) ignora lockForUpdate. Para verificarlo en MySQL:
-        // ver "Pruebas contra MySQL" en el README (base inventario_avicola_test).
+        // ver "Pruebas contra MySQL" en docs/desarrollo.md (base inventario_avicola_test).
         if (DB::getDriverName() !== 'mysql') {
             $this->markTestSkipped('Solo con MySQL: SQLite ignora lockForUpdate.');
         }

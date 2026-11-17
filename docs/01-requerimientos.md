@@ -94,7 +94,7 @@ Necesidades expresadas desde la perspectiva de cada actor, antes de bajarlas a c
 | Texto secundario | `#888888` – `#AAAAAA` (gris medio) |
 | Estados (alerta, éxito) | Se resuelven con intensidad/contraste (blanco brillante para alerta, gris tenue para neutral) en vez de color, manteniendo la paleta monocromática |
 
-> **Actualización (v1):** la paleta oscura de esta sección se descartó; el diseño final sigue el Figma (tema claro, monocromático, con un acento naranja mínimo). Ver el README del proyecto.
+> **Actualización (v1):** la paleta oscura de esta sección se descartó; el diseño final sigue el Figma (tema claro, monocromático, con un acento naranja mínimo). Ver [docs/desarrollo.md, "Diferencias con la documentación de docs/"](desarrollo.md#diferencias-con-la-documentación-de-docs).
 
 **Elemento visual distintivo (RNF-08), actualizado:** icosaedro alámbrico 3D en gris oscuro (`#1C1C1C`) sobre el fondo claro (el blanco sobre negro quedó descartado junto con el tema oscuro) que **se transforma en un huevo**. Va en **Inicio** (compacto, en el encabezado) y en el **login** (grande), con un solo componente reutilizable `x-icosaedro`; **no va en el Dashboard**. Three.js está **autoalojado** en `public/js/vendor` (versión, origen, SHA-256 y licencia en `THIRD_PARTY.md`), sin CDN ni scripts inline. Comportamiento:
 - Al cargar aparece el icosaedro (30 aristas). A los ~1,2 s se transforma en un huevo en ~1,4 s, con la curva `cubic-bezier(.22, 1, .36, 1)` (token `--ease-asentar`), y se queda como huevo.
